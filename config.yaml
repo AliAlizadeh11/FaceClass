@@ -1,0 +1,51 @@
+# FaceClass Configuration File
+# This file contains all configuration settings for the FaceClass project
+
+paths:
+  data_dir: "data"
+  raw_videos: "data/raw_videos"
+  labeled_faces: "data/labeled_faces"
+  heatmaps: "data/heatmaps"
+  outputs: "data/outputs"
+  models: "models"
+  reports: "reports"
+
+face_detection:
+  model: "opencv"  # Options: yolo, retinaface, mtcnn, opencv
+  confidence_threshold: 0.5
+  nms_threshold: 0.4
+  min_face_size: 20
+
+face_recognition:
+  model: "opencv"  # Options: arcface, facenet, vggface, opencv
+  similarity_threshold: 0.6
+  embedding_size: 512
+
+emotion_detection:
+  model: "placeholder"  # Options: affectnet, fer2013, placeholder
+  emotions: ["angry", "disgust", "fear", "happy", "sad", "surprise", "neutral"]
+  confidence_threshold: 0.3
+
+attention_detection:
+  model: "placeholder"  # Options: mediapipe, openface, placeholder
+  gaze_threshold: 0.7
+  head_pose_threshold: 30.0
+
+video_processing:
+  fps: 30
+  max_resolution: [1920, 1080]
+  batch_size: 4
+
+heatmap:
+  resolution: [100, 100]
+  blur_radius: 5
+  color_map: "hot"
+
+dashboard:
+  port: 8080
+  host: "localhost"
+  refresh_rate: 1.0
+
+logging:
+  level: "INFO"
+  file: "faceclass.log" 
