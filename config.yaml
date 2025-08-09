@@ -1,5 +1,5 @@
 # FaceClass Configuration File
-# This file contains all configuration settings for the FaceClass project
+# Comprehensive Student Attendance Analysis System using Computer Vision
 
 paths:
   data_dir: "data"
@@ -9,43 +9,96 @@ paths:
   outputs: "data/outputs"
   models: "models"
   reports: "reports"
+  temp: "data/temp"
+  frames: "data/frames"
 
+# Face Detection and Tracking Configuration
 face_detection:
-  model: "opencv"  # Options: yolo, retinaface, mtcnn, opencv
+  model: "yolo"  # Options: yolo, retinaface, mtcnn, opencv
   confidence_threshold: 0.5
   nms_threshold: 0.4
   min_face_size: 20
+  max_faces: 50
 
+# Face Recognition Configuration
 face_recognition:
-  model: "opencv"  # Options: arcface, facenet, vggface, opencv
+  model: "arcface"  # Options: arcface, facenet, vggface, opencv
   similarity_threshold: 0.6
   embedding_size: 512
+  database_path: "data/labeled_faces/face_database.pkl"
+  update_database: true
 
+# Emotion Detection Configuration
 emotion_detection:
-  model: "placeholder"  # Options: affectnet, fer2013, placeholder
-  emotions: ["angry", "disgust", "fear", "happy", "sad", "surprise", "neutral"]
+  model: "fer2013"  # Options: affectnet, fer2013, placeholder
+  emotions: ["angry", "disgust", "fear", "happy", "sad", "surprise", "neutral", "confused", "tired"]
   confidence_threshold: 0.3
+  batch_size: 4
 
+# Attention Detection Configuration
 attention_detection:
-  model: "placeholder"  # Options: mediapipe, openface, placeholder
+  model: "mediapipe"  # Options: mediapipe, openface, placeholder
   gaze_threshold: 0.7
   head_pose_threshold: 30.0
+  attention_timeout: 5.0  # seconds
+  min_attention_duration: 2.0  # seconds
 
+# Video Processing Configuration
 video_processing:
   fps: 30
   max_resolution: [1920, 1080]
   batch_size: 4
+  keyframe_interval: 1.0  # seconds
+  max_video_duration: 3600  # 1 hour
 
+# Heatmap and Spatial Analysis Configuration
 heatmap:
   resolution: [100, 100]
   blur_radius: 5
   color_map: "hot"
+  update_interval: 1.0  # seconds
 
+# Classroom Layout Configuration
+classroom:
+  width: 1920
+  height: 1080
+  rows: 5
+  columns: 8
+  seat_spacing_x: 200
+  seat_spacing_y: 150
+
+# Attendance Tracking Configuration
+attendance:
+  min_detection_duration: 3.0  # seconds
+  max_absence_duration: 300.0  # 5 minutes
+  auto_mark_absent: true
+  attendance_threshold: 0.7
+
+# Dashboard Configuration
 dashboard:
   port: 8080
   host: "localhost"
   refresh_rate: 1.0
+  max_display_frames: 10
+  chart_update_interval: 5.0
 
+# Logging Configuration
 logging:
   level: "INFO"
-  file: "faceclass.log" 
+  file: "faceclass.log"
+  max_file_size: "10MB"
+  backup_count: 5
+
+# Model Evaluation Configuration
+evaluation:
+  metrics: ["precision", "recall", "f1_score", "accuracy"]
+  test_split: 0.2
+  cross_validation_folds: 5
+
+# Reporting Configuration
+reporting:
+  generate_reports: true
+  report_format: "html"  # Options: html, pdf, json
+  include_charts: true
+  include_heatmaps: true
+  include_statistics: true 

@@ -1,41 +1,71 @@
-# Core dependencies
+# FaceClass - Comprehensive Student Attendance Analysis System
+# Core dependencies for computer vision and deep learning
+
+# Core Python packages
 numpy>=1.21.0
 opencv-python>=4.5.0
-matplotlib>=3.5.0
-pandas>=1.3.0
+Pillow>=8.3.0
 scipy>=1.7.0
 
-# Computer Vision and ML
-torch==2.2.2
-torchvision==0.17.2
-torchaudio==2.2.2
+# Deep learning frameworks
+torch>=1.9.0
+torchvision>=0.10.0
+tensorflow>=2.6.0
 
-scikit-learn>=1.0.0
+# Computer vision and face detection
 mediapipe>=0.8.0
-
-# Face detection and recognition
+dlib>=19.22.0
+face-recognition>=1.3.0
 mtcnn>=0.1.1
-# retinaface==0.0.13
-insightface>=0.7.3
-facenet-pytorch>=2.5.0
+retinaface>=0.0.13
 
-# Dashboard and visualization
-dash>=2.0.0
-plotly>=5.0.0
+# Data processing and analysis
+pandas>=1.3.0
+scikit-learn>=1.0.0
+matplotlib>=3.4.0
 seaborn>=0.11.0
+plotly>=5.0.0
 
-# Configuration and utilities
-pyyaml>=6.0
-pathlib2>=2.3.0
+# Web framework and dashboard
+dash>=2.0.0
+dash-bootstrap-components>=1.0.0
+Flask>=2.0.0
+jinja2>=3.0.0
+
+# Data visualization
+bokeh>=2.3.0
+altair>=4.1.0
+
+# Image processing
+imageio>=2.9.0
+imageio-ffmpeg>=0.4.5
+
+# Utilities
+tqdm>=4.62.0
+pyyaml>=5.4.0
+python-dateutil>=2.8.0
+pytz>=2021.1
+
+# Optional: GPU acceleration
+# cuda-python>=11.0.0  # Uncomment for CUDA support
+
+# Optional: Advanced face recognition
+# insightface>=0.7.0  # Uncomment for ArcFace support
+# facenet-pytorch>=2.5.0  # Uncomment for FaceNet support
+
+# Optional: Additional models
+# keras-vggface>=0.6  # Uncomment for VGGFace support
+
+# Development and testing
+pytest>=6.2.0
+pytest-cov>=2.12.0
+black>=21.0.0
+flake8>=3.9.0
+
+# Documentation
+sphinx>=4.0.0
+sphinx-rtd-theme>=0.5.0
 
 # Jupyter notebooks
 jupyter>=1.0.0
-ipykernel>=6.0.0
-
-# TensorFlow
-tensorflow>=2.6.0       
-
-# Development and testing
-pytest>=6.0.0
-black>=21.0.0
-flake8>=3.9.0 
+ipykernel>=6.0.0 
