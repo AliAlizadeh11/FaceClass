@@ -78,7 +78,8 @@ class FaceTracker:
             from retinaface import RetinaFace
             return {'type': 'retinaface', 'model': RetinaFace}
         except ImportError:
-            logger.warning("RetinaFace not available, using OpenCV")
+            logger.warning("RetinaFace not available, falling back to OpenCV")
+            logger.info("To use RetinaFace, install it with: pip install retinaface")
             return self._load_opencv_detector()
     
     def _load_mtcnn_detector(self):

@@ -260,7 +260,7 @@ def main():
         else:
             logger.error("Video path required for analysis")
             return
-        
+    
     except Exception as e:
         logger.error(f"Pipeline failed: {e}")
         import traceback

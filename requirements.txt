@@ -10,14 +10,13 @@ scipy>=1.7.0
 # Deep learning frameworks
 torch>=1.9.0
 torchvision>=0.10.0
-tensorflow>=2.6.0
+tensorflow>=2.16.0
 
 # Computer vision and face detection
 mediapipe>=0.8.0
 dlib>=19.22.0
 face-recognition>=1.3.0
 mtcnn>=0.1.1
-retinaface>=0.0.13
 
 # Data processing and analysis
 pandas>=1.3.0
@@ -46,16 +45,6 @@ pyyaml>=5.4.0
 python-dateutil>=2.8.0
 pytz>=2021.1
 
-# Optional: GPU acceleration
-# cuda-python>=11.0.0  # Uncomment for CUDA support
-
-# Optional: Advanced face recognition
-# insightface>=0.7.0  # Uncomment for ArcFace support
-# facenet-pytorch>=2.5.0  # Uncomment for FaceNet support
-
-# Optional: Additional models
-# keras-vggface>=0.6  # Uncomment for VGGFace support
-
 # Development and testing
 pytest>=6.2.0
 pytest-cov>=2.12.0
@@ -68,4 +57,4 @@ sphinx-rtd-theme>=0.5.0
 
 # Jupyter notebooks
 jupyter>=1.0.0
-ipykernel>=6.0.0 
+ipykernel>=6.0.0

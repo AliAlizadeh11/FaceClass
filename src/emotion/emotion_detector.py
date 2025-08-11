@@ -84,7 +84,7 @@ class EmotionDetector:
                 return {'type': 'affectnet', 'model': model}
             else:
                 logger.warning("AffectNet model not found, using placeholder")
-                return self._load_placeholder_model()
+            return self._load_placeholder_model()
         except ImportError:
             logger.warning("PyTorch not available, using placeholder")
             return self._load_placeholder_model()
@@ -122,7 +122,7 @@ class EmotionDetector:
                 return {'type': 'fer2013', 'model': model}
             else:
                 logger.warning("FER2013 model not found, using placeholder")
-                return self._load_placeholder_model()
+            return self._load_placeholder_model()
         except ImportError:
             logger.warning("PyTorch not available, using placeholder")
             return self._load_placeholder_model()
@@ -347,16 +347,16 @@ class EmotionDetector:
     def _calculate_head_pose(self, landmarks, image_shape) -> Tuple[float, float, float]:
         """Calculate head pose from facial landmarks."""
         try:
-            # Get key facial landmarks for head pose estimation
-            # This is a simplified implementation
+                # Get key facial landmarks for head pose estimation
+                # This is a simplified implementation
             height, width = image_shape[:2]
             
-            # Use eye and nose landmarks for pose estimation
+                # Use eye and nose landmarks for pose estimation
             left_eye = landmarks.landmark[33]  # Left eye center
             right_eye = landmarks.landmark[263]  # Right eye center
             nose = landmarks.landmark[1]  # Nose tip
             
-            # Calculate head pose angles (simplified)
+                # Calculate head pose angles (simplified)
             eye_center_x = (left_eye.x + right_eye.x) / 2
             eye_center_y = (left_eye.y + right_eye.y) / 2
             
@@ -371,6 +371,7 @@ class EmotionDetector:
             roll = np.degrees(eye_angle)
             
             return (yaw, pitch, roll)
+
         except Exception as e:
             logger.error(f"Head pose calculation failed: {e}")
             return (0.0, 0.0, 0.0)
@@ -378,15 +379,16 @@ class EmotionDetector:
     def _calculate_gaze_direction(self, landmarks) -> Tuple[float, float]:
         """Calculate gaze direction from facial landmarks."""
         try:
-            # Get eye landmarks for gaze estimation
+                # Get eye landmarks for gaze estimation
             left_eye_center = landmarks.landmark[33]
             right_eye_center = landmarks.landmark[263]
             
-            # Calculate gaze direction (simplified)
+                # Calculate gaze direction (simplified)
             gaze_x = (left_eye_center.x + right_eye_center.x) / 2 - 0.5
             gaze_y = (left_eye_center.y + right_eye_center.y) / 2 - 0.5
             
             return (gaze_x, gaze_y)
+
         except Exception as e:
             logger.error(f"Gaze direction calculation failed: {e}")
             return (0.0, 0.0)
@@ -431,15 +433,15 @@ class EmotionDetector:
             face_region = self._extract_face_region(detection['frame'], detection['bbox'])
             if face_region is None:
                 continue
-            
-            # Detect emotions
+                
+                # Detect emotions
             emotions = self.detect_emotions(face_region)
             dominant_emotion = max(emotions.items(), key=lambda x: x[1])[0]
             emotion_confidence = emotions[dominant_emotion]
-            
-            # Detect attention
+                
+                # Detect attention
             attention_data = self.detect_attention(face_region)
-            
+                
             # Update detection with emotion and attention data
             detection['emotion'] = {
                 'emotions': emotions,
@@ -476,6 +478,7 @@ class EmotionDetector:
             
             face_region = frame[y1:y2, x1:x2]
             return face_region
+            
         except Exception as e:
             logger.error(f"Face region extraction failed: {e}")
             return None

@@ -180,7 +180,7 @@ Options:
                          - report: Generate report only
   --extract-frames       Extract frames from video
   --generate-report      Generate comprehensive report
-```
+   ```
 
 ### Configuration
 

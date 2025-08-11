@@ -14,7 +14,7 @@ paths:
 
 # Face Detection and Tracking Configuration
 face_detection:
-  model: "yolo"  # Options: yolo, retinaface, mtcnn, opencv
+  model: "opencv"  # Options: yolo, retinaface, mtcnn, opencv
   confidence_threshold: 0.5
   nms_threshold: 0.4
   min_face_size: 20
@@ -85,7 +85,7 @@ dashboard:
 # Logging Configuration
 logging:
   level: "INFO"
-  file: "faceclass.log"
+  file: "faceclass.log" 
   max_file_size: "10MB"
   backup_count: 5
 

@@ -62,9 +62,6 @@ class DashboardUI:
         self.processing_status = "Ready"
         self.video_analysis_data = {}
         
-        # Clean up old videos on startup
-        self._cleanup_old_videos()
-        
         # Load video frames
         self._load_video_frames()
         
@@ -98,7 +95,7 @@ class DashboardUI:
     
     def _process_frames_for_detection(self):
         """Process frames to get real face detection results."""
-        try:
+                try:
             import sys
             from pathlib import Path
             
@@ -173,11 +170,11 @@ class DashboardUI:
                 sys.path.insert(0, str(src_path))
             
             try:
-                from detection.face_tracker import FaceTracker
-                from config import Config
-                
-                config = Config()
-                face_tracker = FaceTracker(config)
+            from detection.face_tracker import FaceTracker
+            from config import Config
+            
+            config = Config()
+            face_tracker = FaceTracker(config)
             except ImportError as e:
                 logger.error(f"Failed to import face tracker: {e}")
                 # Fallback: create a simple mock detector
@@ -199,97 +196,106 @@ class DashboardUI:
             frames_dir = Path("data/frames")
             frames_dir.mkdir(parents=True, exist_ok=True)
             
-            # Extract frames at regular intervals (every 2 seconds for better analysis)
-            frame_interval = int(fps * 2) if fps > 0 else 60
-            if frame_interval < 1:
-                frame_interval = 1
-            
+            # Extract frames at regular intervals (every 5 seconds)
+            frame_interval = int(fps * 5) if fps > 0 else 150
             extracted_frames = []
-            frame_analysis_data = []
-            current_frame = 0
+            all_detections = []
+            attendance_data = {}
+            student_tracking = {}
             
-            logger.info(f"Extracting frames every {frame_interval} frames...")
-            
+            frame_count = 0
             while True:
                 ret, frame = cap.read()
                 if not ret:
                     break
                 
                 # Extract frame at intervals
-                if current_frame % frame_interval == 0:
+                if frame_count % frame_interval == 0:
+                    # Detect faces in frame
+                    detections = face_tracker.detect_faces(frame)
+                    
+                    # Add frame information and track students
+                    for i, detection in enumerate(detections):
+                        detection['frame_idx'] = len(extracted_frames)
+                        detection['timestamp'] = frame_count / fps if fps > 0 else frame_count
+                        detection['track_id'] = len(extracted_frames) * 100 + i
+                        
+                        # Generate student ID based on position and tracking
+                        student_id = self._generate_student_id(detection, student_tracking)
+                        detection['student_id'] = student_id
+                        detection['attendance_status'] = 'present'
+                        
+                        # Track attendance
+                        if student_id not in attendance_data:
+                            attendance_data[student_id] = {
+                                'id': student_id,
+                                'name': f'Student {student_id}',
+                                'present_frames': 0,
+                                'total_frames': 0,
+                                'first_seen': detection['timestamp'],
+                                'last_seen': detection['timestamp'],
+                                'attendance_percentage': 0.0,
+                                'status': 'present'
+                            }
+                        
+                        attendance_data[student_id]['present_frames'] += 1
+                        attendance_data[student_id]['last_seen'] = detection['timestamp']
+                    
+                    all_detections.extend(detections)
+                    
                     # Save frame
-                    frame_filename = f"uploaded_frame_{current_frame:03d}.jpg"
-                    frame_path = frames_dir / frame_filename
+                    frame_path = frames_dir / f"uploaded_frame_{len(extracted_frames):03d}.jpg"
+                    cv2.imwrite(str(frame_path), frame)
+                    extracted_frames.append(str(frame_path))
                     
-                    # Resize frame for better processing (max 800x600)
-                    height, width = frame.shape[:2]
-                    if width > 800 or height > 600:
-                        scale = min(800/width, 600/height)
-                        new_width = int(width * scale)
-                        new_height = int(height * scale)
-                        frame_resized = cv2.resize(frame, (new_width, new_height))
-                    else:
-                        frame_resized = frame
-                    
-                    # Save the frame
-                    cv2.imwrite(str(frame_path), frame_resized)
-                    
-                    # Analyze frame for faces
-                    try:
-                        detections = face_tracker.detect_faces(frame_resized)
-                        frame_data = {
-                            'frame_number': current_frame,
-                            'frame_path': str(frame_path),
-                            'detections': detections,
-                            'timestamp': current_frame / fps if fps > 0 else 0
-                        }
-                        frame_analysis_data.append(frame_data)
-                        extracted_frames.append(str(frame_path))
-                        
-                        logger.info(f"Frame {current_frame}: {len(detections)} faces detected")
-                        
-                    except Exception as e:
-                        logger.warning(f"Failed to analyze frame {current_frame}: {e}")
-                        # Still save the frame even if analysis fails
-                        extracted_frames.append(str(frame_path))
+                    logger.info(f"Extracted frame {len(extracted_frames)} with {len(detections)} detections")
                 
-                current_frame += 1
+                frame_count += 1
                 
-                # Progress update every 100 frames
-                if current_frame % 100 == 0:
-                    logger.info(f"Processed {current_frame}/{total_frames} frames...")
+                # Limit to prevent memory issues
+                if len(extracted_frames) >= 50:
+                    break
             
             cap.release()
             
-            # Update the video frames list
-            self.video_frames = extracted_frames
-            self.current_frame_index = 0
+            # Calculate attendance percentages
+            total_frames_processed = len(extracted_frames)
+            for student_id, data in attendance_data.items():
+                data['total_frames'] = total_frames_processed
+                data['attendance_percentage'] = (data['present_frames'] / total_frames_processed) * 100
+                data['status'] = 'present' if data['attendance_percentage'] >= 50 else 'absent'
             
-            logger.info(f"Successfully extracted {len(extracted_frames)} frames from video")
-            
-            # Create analysis summary
-            analysis_result = {
-                'video_path': video_path,
-                'total_frames': total_frames,
-                'extracted_frames': len(extracted_frames),
-                'fps': fps,
-                'duration': duration,
-                'frames': extracted_frames,
-                'frame_analysis': frame_analysis_data,
-                'detections': frame_analysis_data
+            # Generate attendance summary
+            attendance_summary = {
+                'total_students': len(attendance_data),
+                'present_students': len([s for s in attendance_data.values() if s['status'] == 'present']),
+                'absent_students': len([s for s in attendance_data.values() if s['status'] == 'absent']),
+                'attendance_rate': (len([s for s in attendance_data.values() if s['status'] == 'present']) / len(attendance_data)) * 100 if attendance_data else 0
             }
             
-            self.processing_status = f"✅ Video processed successfully! Extracted {len(extracted_frames)} frames for analysis."
+            # Update video analysis data
+            self.video_analysis_data = {
+                'frames': extracted_frames,
+                'detections': all_detections,
+                'attendance_data': attendance_data,
+                'attendance_summary': attendance_summary,
+                'total_frames': total_frames,
+                'fps': fps,
+                'duration': duration,
+                'extracted_frames': len(extracted_frames)
+            }
             
-            return analysis_result
+            self.processing_status = f"✅ Attendance analysis complete: {attendance_summary['present_students']}/{attendance_summary['total_students']} students present ({attendance_summary['attendance_rate']:.1f}%)"
+            logger.info(f"Attendance analysis complete: {attendance_summary['present_students']}/{attendance_summary['total_students']} students present")
+            
+            return self.video_analysis_data
             
         except Exception as e:
-            error_msg = f"Error processing video: {str(e)}"
-            logger.error(error_msg)
+            self.processing_status = f"❌ Error processing video: {str(e)}"
+            logger.error(f"Error processing video: {e}")
             import traceback
             logger.error(f"Processing traceback: {traceback.format_exc()}")
-            self.processing_status = f"❌ {error_msg}"
-            return None
+            return {}
     
     def _create_mock_face_tracker(self):
         """Create a mock face tracker for fallback when real detector is not available."""
@@ -358,56 +364,38 @@ class DashboardUI:
                 logger.error(f"Failed to decode base64: {e}")
                 return None
             
-            # Create multiple directories for better organization
+            # Create temporary directory if it doesn't exist
             temp_dir = Path("data/temp")
-            raw_videos_dir = Path("data/raw_videos")
-            
-            # Ensure directories exist
             temp_dir.mkdir(parents=True, exist_ok=True)
-            raw_videos_dir.mkdir(parents=True, exist_ok=True)
             
             # Clean filename to prevent path issues
             safe_filename = "".join(c for c in filename if c.isalnum() or c in ('-', '_', '.')).rstrip()
             if not safe_filename:
                 safe_filename = f"uploaded_video_{int(time.time())}.mp4"
             
-            # Ensure unique filename in both directories
+            # Ensure unique filename
             counter = 1
             original_safe_filename = safe_filename
-            while (temp_dir / safe_filename).exists() or (raw_videos_dir / safe_filename).exists():
+            while (temp_dir / safe_filename).exists():
                 name, ext = os.path.splitext(original_safe_filename)
                 safe_filename = f"{name}_{counter}{ext}"
                 counter += 1
                 if counter > 100:  # Prevent infinite loop
                     break
             
-            # Save to temp directory first
-            temp_video_path = temp_dir / safe_filename
-            logger.info(f"Saving to temp: {temp_video_path}")
+            video_path = temp_dir / safe_filename
+            logger.info(f"Saving to: {video_path}")
             
             # Write the file
-            with open(temp_video_path, 'wb') as f:
+            with open(video_path, 'wb') as f:
                 f.write(decoded)
-                f.flush()  # Ensure data is written to disk
-                os.fsync(f.fileno())  # Force sync to disk
             
             # Verify the file was written correctly
-            if temp_video_path.exists() and temp_video_path.stat().st_size > 0:
-                logger.info(f"Successfully saved to temp: {temp_video_path} ({temp_video_path.stat().st_size} bytes)")
-                
-                # Also save a copy to raw_videos for permanent storage
-                try:
-                    raw_video_path = raw_videos_dir / safe_filename
-                    import shutil
-                    shutil.copy2(temp_video_path, raw_video_path)
-                    logger.info(f"Also saved to raw_videos: {raw_video_path}")
-                except Exception as copy_error:
-                    logger.warning(f"Failed to copy to raw_videos: {copy_error}")
-                
-                # Return the temp path for immediate processing
-                return str(temp_video_path)
+            if video_path.exists() and video_path.stat().st_size > 0:
+                logger.info(f"Successfully saved uploaded video: {video_path} ({video_path.stat().st_size} bytes)")
+            return str(video_path)
             else:
-                logger.error(f"File was not written correctly: {temp_video_path}")
+                logger.error(f"File was not written correctly: {video_path}")
                 return None
             
         except Exception as e:
@@ -708,114 +696,66 @@ class DashboardUI:
                         max_size=100*1024*1024  # 100MB max
                     ),
                     html.Div(id='upload-status', style={'marginTop': '10px', 'minHeight': '20px'}),
-                    
-                    # Video preview area
-                    html.Div(id='video-preview', style={'marginTop': '15px', 'minHeight': '100px'}),
-                    
-                    html.Div([
-                        # Process Video button
-                        html.Button(
-                            id='process-video-button',
-                            children='🎬 Process Video',
-                            style={
-                                'backgroundColor': '#95a5a6',
-                                'color': 'white',
-                                'border': 'none',
-                                'padding': '12px 24px',
-                                'borderRadius': '6px',
-                                'cursor': 'not-allowed',
-                                'fontSize': '16px',
-                                'fontWeight': 'bold',
-                                'opacity': '0.6'
-                            }
-                        ),
-                        html.Button(
-                        'Clear Video', 
-                            id='clear-video-button', 
-                            n_clicks=0,
-                            style={
-                            'backgroundColor': '#e74c3c', 
-                                'color': 'white', 
-                                'border': 'none', 
-                                'padding': '10px 20px',
-                                'borderRadius': '4px',
-                                'fontSize': '13px',
-                                'fontWeight': 'bold',
-                                'cursor': 'pointer'
-                            }
-                        )
-                ], style={'marginTop': '15px'})
+                        html.Div([
+                            html.Button(
+                                'Process Video', 
+                                id='process-video-button', 
+                                n_clicks=0,
+                            disabled=True,
+                                style={
+                                'backgroundColor': '#bdc3c7', 
+                                'color': '#7f8c8d', 
+                                    'border': 'none', 
+                                    'padding': '10px 20px', 
+                                    'marginRight': 10,
+                                    'borderRadius': '4px',
+                                    'fontSize': '13px',
+                                    'fontWeight': 'bold',
+                                'cursor': 'not-allowed'
+                                }
+                            ),
+                            html.Button(
+                            'Clear Video', 
+                                id='clear-video-button', 
+                                n_clicks=0,
+                                style={
+                                'backgroundColor': '#e74c3c', 
+                                    'color': 'white', 
+                                    'border': 'none', 
+                                    'padding': '10px 20px',
+                                    'borderRadius': '4px',
+                                    'fontSize': '13px',
+                                    'fontWeight': 'bold',
+                                    'cursor': 'pointer'
+                                }
+                            )
+                    ], style={'marginTop': '15px'})
                 ], style={'padding': '20px', 'backgroundColor': 'white', 'borderRadius': '10px', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'})
             ], style={'marginBottom': '30px'}),
                 
             # Row 2: Video Analysis Results
-            html.Div([
+                html.Div([
                 html.H2("🎬 Video Analysis Results", style={'color': '#2c3e50', 'marginBottom': '15px'}),
-                
-                # Frame counter and navigation
-                html.Div([
                     html.Div([
-                        html.Span("📊 Frame: ", style={'fontWeight': 'bold', 'color': '#2c3e50'}),
-                        html.Span(id='frame-counter', children="0/0", style={'color': '#3498db', 'fontWeight': 'bold'}),
-                        html.Span(" of ", style={'color': '#7f8c8d'}),
-                        html.Span(id='total-frames', children="0", style={'color': '#7f8c8d'})
-                    ], style={'textAlign': 'center', 'marginBottom': '10px', 'fontSize': '16px'}),
-                    
-                    # Navigation buttons
                     html.Div([
-                        html.Button(
-                            '⏮️ Previous Frame',
-                            id='prev-frame-button',
-                            style={
-                                'backgroundColor': '#3498db',
-                                'color': 'white',
-                                'border': 'none',
-                                'padding': '10px 20px',
-                                'margin': '0 10px',
-                                'borderRadius': '5px',
-                                'cursor': 'pointer',
-                                'fontSize': '14px'
-                            }
-                        ),
-                        html.Button(
-                            '⏭️ Next Frame',
-                            id='next-frame-button',
-                            style={
-                                'backgroundColor': '#27ae60',
-                                'color': 'white',
-                                'border': 'none',
-                                'padding': '10px 20px',
-                                'margin': '0 10px',
-                                'borderRadius': '5px',
-                                'cursor': 'pointer',
-                                'fontSize': '14px'
-                            }
-                        )
-                    ], style={'textAlign': 'center', 'marginBottom': '15px'})
-                ], style={'backgroundColor': '#ecf0f1', 'padding': '15px', 'borderRadius': '8px', 'marginBottom': '15px'}),
-                
-                # Video frame display
+                        html.H4("Video Frame Display", style={'marginBottom': '10px'}),
+                        html.Img(id='video-frame', style={'maxWidth': '100%', 'borderRadius': '8px'}),
                 html.Div([
-                    html.Img(
-                        id='video-frame',
-                        src=self._create_classroom_photo(),
-                        style={
-                            'width': '100%',
-                            'maxWidth': '800px',
-                            'height': 'auto',
-                            'border': '2px solid #bdc3c7',
-                            'borderRadius': '8px',
-                            'boxShadow': '0 4px 8px rgba(0,0,0,0.1)'
-                        }
-                    )
-                ], style={'textAlign': 'center', 'marginBottom': '15px'}),
-                
-                # Processing status
-                html.Div(id='processing-status', style={'textAlign': 'center', 'minHeight': '60px'}),
-                
-                # Frame information
-                html.Div(id='frame-info', style={'marginTop': '15px'})
-            ], style={'backgroundColor': 'white', 'padding': '20px', 'borderRadius': '10px', 'boxShadow': '0 2px 10px rgba(0,0,0,0.1)', 'marginBottom': '20px'}),
+                            html.Button('⏮️ Previous', id='prev-frame-button', n_clicks=0, 
+                                      style={'marginRight': '10px', 'padding': '5px 15px'}),
+                            html.Button('⏭️ Next', id='next-frame-button', n_clicks=0, 
+                                      style={'padding': '5px 15px'})
+                        ], style={'marginTop': '10px', 'textAlign': 'center'}),
+                        html.Div(id='frame-info', style={'marginTop': '10px', 'textAlign': 'center', 'color': '#7f8c8d'})
+                    ], style={'flex': '1', 'marginRight': '20px'}),
+                    html.Div([
+                        html.H4("Processing Status", style={'marginBottom': '10px'}),
+                        html.Div(id='processing-status', style={'minHeight': '20px', 'padding': '10px', 'backgroundColor': '#f8f9fa', 'borderRadius': '5px'}),
+                        html.H4("Detection Results", style={'marginTop': '20px', 'marginBottom': '10px'}),
+                        html.Div(id='detection-overlay', style={'minHeight': '100px', 'padding': '10px', 'backgroundColor': '#f8f9fa', 'borderRadius': '5px'})
+                    ], style={'flex': '1'})
+                ], style={'display': 'flex', 'gap': '20px', 'padding': '20px', 'backgroundColor': 'white', 'borderRadius': '10px', 'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'})
+            ], style={'marginBottom': '30px'}),
             
             # Row 3: Attendance & Absence System
                         html.Div([
@@ -976,7 +916,7 @@ class DashboardUI:
             if emotions:
                 emotion_counts = Counter(emotions)
                 dominant_emotion = emotion_counts.most_common(1)[0][0].title()
-            else:
+                else:
                 dominant_emotion = "Neutral"
             
             return str(face_count), attention_percentage, dominant_emotion
@@ -1094,10 +1034,10 @@ class DashboardUI:
                 )
             ])
             
-            fig.update_layout(
+                fig.update_layout(
                 title="Position Heatmap",
-                xaxis_title="X Position",
-                yaxis_title="Y Position",
+                    xaxis_title="X Position",
+                    yaxis_title="Y Position",
                 template="plotly_white"
             )
             
@@ -1281,7 +1221,14 @@ class DashboardUI:
             
             # Initialize state if needed
             if stored_data is None:
-                stored_data = self._initialize_dashboard_state()
+                stored_data = {
+                    'uploaded_video_path': None,
+                    'video_frames': [],
+                    'current_frame_index': 0,
+                    'video_analysis_data': {},
+                    'live_data': {},
+                    'processing_status': "Ready"
+                }
             
             # Check if upload was triggered
             if not ctx.triggered:
@@ -1308,93 +1255,49 @@ class DashboardUI:
                 if file_ext not in allowed_extensions:
                     return f"❌ Unsupported file format: {file_ext}. Supported formats: {', '.join(allowed_extensions)}", stored_data
                 
-                # More accurate file size calculation
-                try:
-                    # Remove data URL prefix if present
-                    if contents.startswith('data:'):
-                        content_string = contents.split(',', 1)[1]
-                    else:
-                        content_string = contents
-                    
-                    # Calculate actual size from base64
-                    content_length = len(content_string)
-                    # Base64 encoding increases size by ~33%, so decode to get actual size
-                    actual_size = int(content_length * 0.75)  # More accurate estimate
-                    
-                    max_size = 100 * 1024 * 1024  # 100MB
-                    
-                    if actual_size > max_size:
-                        return f"❌ File too large. Maximum size is 100MB. Estimated size: {actual_size / (1024*1024):.1f}MB", stored_data
-                    
-                    logger.info(f"File size check passed: {actual_size / (1024*1024):.1f}MB")
-                    
-                except Exception as size_error:
-                    logger.warning(f"Could not calculate file size: {size_error}")
-                    # Continue with upload if size calculation fails
+                # Check file size (rough estimate from base64 length)
+                content_length = len(contents) if contents else 0
+                estimated_size = content_length * 0.75  # Base64 is about 75% of original size
+                max_size = 100 * 1024 * 1024  # 100MB
+                
+                if estimated_size > max_size:
+                    return f"❌ File too large. Maximum size is 100MB. Estimated size: {estimated_size / (1024*1024):.1f}MB", stored_data
                 
                 # Process the upload
-                logger.info(f"Processing upload: {filename}")
+                logger.info(f"Processing upload: {filename} (estimated size: {estimated_size / (1024*1024):.1f}MB)")
                 try:
-                    # Log upload details for debugging
-                    logger.info(f"Upload details - Filename: {filename}, Content length: {len(contents) if contents else 0}")
-                    
                     video_path = self._save_uploaded_video(contents, filename)
-                    logger.info(f"Save result - Path: {video_path}, Exists: {Path(video_path).exists() if video_path else False}")
-                    
                     if video_path and Path(video_path).exists():
-                        # Verify the uploaded video
-                        logger.info(f"Verifying video: {video_path}")
-                        if self._verify_uploaded_video(video_path):
-                            file_size = Path(video_path).stat().st_size
-                            stored_data['uploaded_video_path'] = video_path
-                            stored_data['processing_status'] = f"Video uploaded and verified successfully ({file_size / (1024*1024):.1f}MB)"
-                            logger.info(f"Video saved and verified successfully: {video_path} ({file_size / (1024*1024):.1f}MB)")
-                            
-                            # Create a more prominent success message with video preview
-                            success_message = html.Div([
-                                html.Div([
-                                    html.Span("✅ ", style={'color': '#27ae60', 'fontSize': '20px', 'fontWeight': 'bold'}),
-                                    html.Span(f"{filename} uploaded successfully!", style={'color': '#27ae60', 'fontWeight': 'bold', 'fontSize': '18px'}),
-                                    html.Br(),
-                                    html.Span(f"📁 Size: {file_size / (1024*1024):.1f}MB", style={'color': '#7f8c8d', 'fontSize': '14px'}),
-                                    html.Br(),
-                                    html.Span(f"💾 Saved to: {Path(video_path).name}", style={'color': '#95a5a6', 'fontSize': '12px'}),
-                                    html.Br(),
-                                    html.Br(),
-                                    html.Span("🎬 Click 'Process Video' to analyze frame by frame", 
-                                             style={'color': '#3498db', 'fontSize': '16px', 'fontWeight': 'bold'}),
-                                    html.Br(),
-                                    html.Span("The video is now ready for processing!", style={'color': '#27ae60', 'fontSize': '14px'})
-                                ], style={
-                                    'padding': '20px',
-                                    'backgroundColor': '#d4edda',
-                                    'border': '2px solid #c3e6cb',
-                                    'borderRadius': '8px',
-                                    'textAlign': 'center',
-                                    'boxShadow': '0 4px 8px rgba(0,0,0,0.1)'
-                                })
-                            ])
-                            
-                            # Force a refresh of the state
-                            logger.info(f"Updated stored_data with video_path: {video_path}")
-                            return success_message, stored_data
-                        else:
-                            # Video verification failed
-                            stored_data['processing_status'] = "Video uploaded but verification failed"
-                            logger.error(f"Video verification failed for: {video_path}")
-                            
-                            # Try to clean up the failed video
-                            try:
-                                Path(video_path).unlink()
-                                logger.info(f"Cleaned up failed video: {video_path}")
-                            except Exception as cleanup_error:
-                                logger.warning(f"Could not clean up failed video: {cleanup_error}")
-                            
-                            return f"❌ Video uploaded but verification failed. Please try uploading again.", stored_data
+                        file_size = Path(video_path).stat().st_size
+                        stored_data['uploaded_video_path'] = video_path
+                        stored_data['processing_status'] = f"Video uploaded successfully ({file_size / (1024*1024):.1f}MB)"
+                        logger.info(f"Video saved successfully: {video_path} ({file_size / (1024*1024):.1f}MB)")
+                        
+                        # Create a more prominent success message
+                        success_message = html.Div([
+                            html.Div([
+                                html.Span("✅ ", style={'color': '#27ae60', 'fontSize': '16px', 'fontWeight': 'bold'}),
+                                html.Span(f"{filename} uploaded successfully", style={'color': '#27ae60', 'fontWeight': 'bold'}),
+                                html.Br(),
+                                html.Span(f"Size: {file_size / (1024*1024):.1f}MB", style={'color': '#7f8c8d', 'fontSize': '12px'}),
+                                html.Br(),
+                                html.Span("Click 'Process Video' to analyze", style={'color': '#3498db', 'fontSize': '12px', 'fontWeight': 'bold'})
+                            ], style={
+                                'padding': '10px',
+                                'backgroundColor': '#d4edda',
+                                'border': '1px solid #c3e6cb',
+                                'borderRadius': '4px',
+                                'textAlign': 'center'
+                            })
+                        ])
+                        
+                        # Force a refresh of the state
+                        logger.info(f"Updated stored_data with video_path: {video_path}")
+                        return success_message, stored_data
                     else:
                         stored_data['processing_status'] = "Failed to save video"
-                        logger.error(f"Failed to save video - Path: {video_path}, Exists: {Path(video_path).exists() if video_path else False}")
-                        return f"❌ Failed to save {filename}. Check server logs for details.", stored_data
+                        logger.error("Failed to save video")
+                        return f"❌ Failed to save {filename}", stored_data
                 except Exception as e:
                     error_msg = f"Upload error: {str(e)}"
                     stored_data['processing_status'] = error_msg
@@ -1420,7 +1323,14 @@ class DashboardUI:
             
             # Initialize state
             if stored_data is None:
-                stored_data = self._initialize_dashboard_state()
+                stored_data = {
+                    'uploaded_video_path': None,
+                    'video_frames': [],
+                    'current_frame_index': 0,
+                    'video_analysis_data': {},
+                    'live_data': {},
+                    'processing_status': "Ready"
+                }
             
             if not ctx.triggered:
                 return stored_data
@@ -1449,88 +1359,43 @@ class DashboardUI:
                     stored_data['processing_status'] = "❌ Uploaded video file not found. Please upload again."
                     logger.warning(f"Video file not found: {stored_data['uploaded_video_path']}")
                 else:
-                    # Process video and update state
+                # Process video and update state
                     logger.info(f"Processing video: {stored_data['uploaded_video_path']}")
-                    try:
+                try:
                         stored_data['processing_status'] = "🔄 Processing video... Please wait."
                         
                         # Process the video
-                        analysis_data = self._process_uploaded_video(stored_data['uploaded_video_path'])
+                    analysis_data = self._process_uploaded_video(stored_data['uploaded_video_path'])
                         
                         if analysis_data and analysis_data.get('frames'):
-                            stored_data['video_frames'] = analysis_data['frames']
-                            stored_data['current_frame_index'] = 0
-                            stored_data['video_analysis_data'] = analysis_data
+                        stored_data['video_frames'] = analysis_data['frames']
+                        stored_data['current_frame_index'] = 0
+                            stored_data['live_data'] = {'detections': analysis_data.get('detections', [])}
+                        stored_data['video_analysis_data'] = analysis_data
                             stored_data['processing_status'] = f"✅ Processed {len(analysis_data['frames'])} frames successfully"
-                            
-                            # Update the main video frames list for display
-                            self.video_frames = analysis_data['frames']
-                            self.current_frame_index = 0
-                            
                             logger.info(f"Video processed successfully: {len(analysis_data['frames'])} frames extracted")
-                            
-                            # Create success message with frame information
-                            success_message = html.Div([
-                                html.Div([
-                                    html.Span("🎬 ", style={'color': '#3498db', 'fontSize': '16px', 'fontWeight': 'bold'}),
-                                    html.Span("Video Analysis Complete!", style={'color': '#3498db', 'fontWeight': 'bold'}),
-                                    html.Br(),
-                                    html.Span(f"Extracted {len(analysis_data['frames'])} frames", style={'color': '#7f8c8d', 'fontSize': '12px'}),
-                                    html.Br(),
-                                    html.Span(f"Duration: {analysis_data.get('duration', 0):.1f} seconds", style={'color': '#7f8c8d', 'fontSize': '12px'}),
-                                    html.Br(),
-                                    html.Span("Use frame navigation to view results", style={'color': '#27ae60', 'fontSize': '12px', 'fontWeight': 'bold'})
-                                ], style={
-                                    'padding': '10px',
-                                    'backgroundColor': '#d1ecf1',
-                                    'border': '1px solid #bee5eb',
-                                    'borderRadius': '4px',
-                                    'textAlign': 'center'
-                                })
-                            ])
-                            
-                            return stored_data
-                        else:
+                    else:
                             stored_data['processing_status'] = "❌ No frames extracted from video"
                             logger.warning("No frames extracted from video")
-                            return stored_data
-                    except Exception as e:
+                except Exception as e:
                         error_msg = f"Processing error: {str(e)}"
                         stored_data['processing_status'] = f"❌ {error_msg}"
                         logger.error(f"Video processing error: {e}")
                         import traceback
                         logger.error(f"Processing traceback: {traceback.format_exc()}")
-                        return stored_data
-            
+                        
             elif trigger_id == 'prev-frame-button' and stored_data.get('video_frames'):
                 # Navigate to previous frame
-                current_index = stored_data.get('current_frame_index', 0)
-                if current_index > 0:
-                    stored_data['current_frame_index'] = current_index - 1
-                    logger.info(f"Navigated to previous frame: {stored_data['current_frame_index']}")
-                else:
-                    # Wrap to last frame
-                    stored_data['current_frame_index'] = len(stored_data['video_frames']) - 1
-                    logger.info(f"Wrapped to last frame: {stored_data['current_frame_index']}")
-                
-                # Force immediate update
-                logger.info(f"Frame navigation: {stored_data['current_frame_index'] + 1}/{len(stored_data['video_frames'])}")
-                return stored_data
+                current_idx = stored_data.get('current_frame_index', 0)
+                stored_data['current_frame_index'] = max(0, current_idx - 1)
+                logger.info(f"Navigated to previous frame: {stored_data['current_frame_index']}")
                 
             elif trigger_id == 'next-frame-button' and stored_data.get('video_frames'):
                 # Navigate to next frame
-                current_index = stored_data.get('current_frame_index', 0)
-                if current_index < len(stored_data['video_frames']) - 1:
-                    stored_data['current_frame_index'] = current_index + 1
-                    logger.info(f"Navigated to next frame: {stored_data['current_frame_index']}")
-                else:
-                    # Wrap to first frame
-                    stored_data['current_frame_index'] = 0
-                    logger.info(f"Wrapped to first frame: {stored_data['current_frame_index']}")
-                
-                # Force immediate update
-                logger.info(f"Frame navigation: {stored_data['current_frame_index'] + 1}/{len(stored_data['video_frames'])}")
-                return stored_data
+                current_idx = stored_data.get('current_frame_index', 0)
+                max_idx = len(stored_data['video_frames']) - 1
+                stored_data['current_frame_index'] = min(max_idx, current_idx + 1)
+                logger.info(f"Navigated to next frame: {stored_data['current_frame_index']}")
             
             return stored_data
         
@@ -1541,95 +1406,40 @@ class DashboardUI:
             Input('interval-component', 'n_intervals')
         )
         def update_video_display(stored_data, n_intervals):
-            """Update video frame display and processing status."""
-            if not stored_data:
-                return self._create_classroom_photo(), "No video data available"
+            """Update video display based on stored state."""
+            if stored_data is None:
+                return self._create_simple_analysis_message(), "Ready"
             
-            # Get current frame
-            current_frame_index = stored_data.get('current_frame_index', 0)
-            video_frames = stored_data.get('video_frames', [])
+            # Update instance variables from stored data
+            self.uploaded_video_path = stored_data.get('uploaded_video_path')
+            self.video_frames = stored_data.get('video_frames', [])
+            self.current_frame_index = stored_data.get('current_frame_index', 0)
+            self.video_analysis_data = stored_data.get('video_analysis_data', {})
+            self.live_data = stored_data.get('live_data', {})
+            self.processing_status = stored_data.get('processing_status', "Ready")
             
-            if not video_frames:
-                return self._create_classroom_photo(), "No video frames available. Upload and process a video first."
+            # Auto-cycle through frames if available and not manually controlled
+            if (self.video_frames and len(self.video_frames) > 0 and 
+                n_intervals and n_intervals % 5 == 0 and 
+                not stored_data.get('manual_frame_control', False)):
+                self._update_frame_index()
+                stored_data['current_frame_index'] = self.current_frame_index
             
-            # Ensure index is within bounds
-            if current_frame_index >= len(video_frames):
-                current_frame_index = 0
-                stored_data['current_frame_index'] = 0
-            
-            # Get current frame path
-            current_frame_path = video_frames[current_frame_index]
-            
-            # Check if frame exists
-            if not Path(current_frame_path).exists():
-                logger.warning(f"Frame not found: {current_frame_path}")
-                return self._create_classroom_photo(), f"Frame {current_frame_index + 1} not found. Frame file may be missing."
-            
-            # Convert frame to base64 for display
-            try:
-                frame_src = self._frame_to_base64(current_frame_path)
-                
-                # Get analysis data for current frame
-                video_analysis = stored_data.get('video_analysis_data', {})
-                frame_analysis = video_analysis.get('frame_analysis', [])
-                
-                # Find analysis for current frame
-                current_analysis = None
-                for analysis in frame_analysis:
-                    if analysis.get('frame_path') == current_frame_path:
-                        current_analysis = analysis
-                        break
-                
-                # Create status message with frame analysis
-                if current_analysis:
-                    detections = current_analysis.get('detections', [])
-                    timestamp = current_analysis.get('timestamp', 0)
-                    status_message = html.Div([
-                        html.Div([
-                            html.Span(f"🎬 Frame {current_frame_index + 1}/{len(video_frames)}", 
-                                     style={'color': '#2c3e50', 'fontWeight': 'bold', 'fontSize': '16px'}),
-                            html.Br(),
-                            html.Span(f"⏱️ Time: {timestamp:.1f}s", style={'color': '#7f8c8d', 'fontSize': '14px'}),
-                            html.Br(),
-                            html.Span(f"👥 Faces detected: {len(detections)}", 
-                                     style={'color': '#e74c3c' if len(detections) == 0 else '#27ae60', 'fontSize': '14px', 'fontWeight': 'bold'}),
-                            html.Br(),
-                            html.Span(f"📁 File: {Path(current_frame_path).name}", 
-                                     style={'color': '#95a5a6', 'fontSize': '12px'})
-                        ], style={
-                            'padding': '15px',
-                            'backgroundColor': '#f8f9fa',
-                            'border': '2px solid #3498db',
-                            'borderRadius': '8px',
-                            'textAlign': 'center',
-                            'boxShadow': '0 2px 4px rgba(0,0,0,0.1)'
-                        })
-                    ])
+            # Return appropriate frame and status
+            if self.video_frames and len(self.video_frames) > 0:
+                try:
+                frame_src = self._frame_to_base64(self.video_frames[self.current_frame_index])
+                return frame_src, self.processing_status
+                except Exception as e:
+                    logger.error(f"Error loading frame: {e}")
+                    return self._create_simple_analysis_message(), f"Error loading frame: {str(e)}"
+            else:
+                # No video frames available - check if video is uploaded
+                if self.uploaded_video_path and Path(self.uploaded_video_path).exists():
+                    # Video is uploaded but not processed yet - show a video preview
+                    return self._create_video_preview_message(self.uploaded_video_path), self.processing_status
                 else:
-                    status_message = html.Div([
-                        html.Div([
-                            html.Span(f"🎬 Frame {current_frame_index + 1}/{len(video_frames)}", 
-                                     style={'color': '#2c3e50', 'fontWeight': 'bold', 'fontSize': '16px'}),
-                            html.Br(),
-                            html.Span("📊 Analysis data not available", style={'color': '#f39c12', 'fontSize': '14px'}),
-                            html.Br(),
-                            html.Span(f"📁 File: {Path(current_frame_path).name}", 
-                                     style={'color': '#95a5a6', 'fontSize': '12px'})
-                        ], style={
-                            'padding': '15px',
-                            'backgroundColor': '#fff3cd',
-                            'border': '2px solid #ffc107',
-                            'borderRadius': '8px',
-                            'textAlign': 'center'
-                        })
-                    ])
-                
-                logger.info(f"Displaying frame {current_frame_index + 1}/{len(video_frames)}: {current_frame_path}")
-                return frame_src, status_message
-                
-            except Exception as e:
-                logger.error(f"Error displaying frame: {e}")
-                return self._create_classroom_photo(), f"Error displaying frame: {str(e)}"
+                    return self._create_simple_analysis_message(), "Ready - Upload a video to start analysis"
         
         @self.app.callback(
             Output('frame-info', 'children'),
@@ -1641,81 +1451,10 @@ class DashboardUI:
             if not stored_data or not stored_data.get('video_frames'):
                 return "No video frames available"
             
-            current_index = stored_data.get('current_frame_index', 0)
-            video_frames = stored_data.get('video_frames', [])
-            video_analysis = stored_data.get('video_analysis_data', {})
-            
-            if not video_frames:
-                return "No frames to display"
-            
-            # Get current frame analysis
-            current_frame_path = video_frames[current_index]
-            current_analysis = None
-            
-            for analysis in video_analysis.get('frame_analysis', []):
-                if analysis.get('frame_path') == current_frame_path:
-                    current_analysis = analysis
-                    break
-            
-            # Create detailed frame information
-            frame_info = html.Div([
-                html.H4("📊 Frame Analysis", style={'color': '#2c3e50', 'marginBottom': '10px'}),
-                
-                # Frame details
-                html.Div([
-                    html.Span("🎬 ", style={'color': '#3498db', 'fontSize': '16px'}),
-                    html.Span(f"Frame {current_index + 1} of {len(video_frames)}", 
-                             style={'fontWeight': 'bold', 'color': '#2c3e50'}),
-                    html.Br(),
-                    html.Span("📁 ", style={'color': '#95a5a6'}),
-                    html.Span(f"File: {Path(current_frame_path).name}", 
-                             style={'fontSize': '12px', 'color': '#7f8c8d'}),
-                ], style={'marginBottom': '15px'}),
-                
-                # Analysis results
-                html.Div([
-                    html.H5("🔍 Detection Results", style={'color': '#e74c3c', 'marginBottom': '8px'}),
-                    
-                    # Face detection count
-                    html.Div([
-                        html.Span("👥 ", style={'color': '#e74c3c'}),
-                        html.Span("Faces Detected: ", style={'fontWeight': 'bold'}),
-                        html.Span(f"{len(current_analysis.get('detections', [])) if current_analysis else 0}", 
-                                 style={'color': '#27ae60', 'fontWeight': 'bold'})
-                    ], style={'marginBottom': '5px'}),
-                    
-                    # Video properties
-                    html.Div([
-                        html.Span("🎥 ", style={'color': '#9b59b6'}),
-                        html.Span("Video Properties: ", style={'fontWeight': 'bold'}),
-                        html.Br(),
-                        html.Span(f"Total Frames: {video_analysis.get('total_frames', 0)}", 
-                                 style={'fontSize': '12px', 'color': '#7f8c8d'}),
-                        html.Br(),
-                        html.Span(f"FPS: {video_analysis.get('fps', 0):.1f}", 
-                                 style={'fontSize': '12px', 'color': '#7f8c8d'}),
-                        html.Br(),
-                        html.Span(f"Duration: {video_analysis.get('duration', 0):.1f}s", 
-                                 style={'fontSize': '12px', 'color': '#7f8c8d'})
-                    ], style={'marginTop': '10px', 'padding': '10px', 'backgroundColor': '#f8f9fa', 'borderRadius': '4px'})
-                    
-                ], style={'border': '1px solid #dee2e6', 'padding': '15px', 'borderRadius': '8px'})
-                
-            ], style={'padding': '15px'})
-            
-            # Add timestamp information if available
-            if current_analysis:
-                timestamp_info = html.Div([
-                    html.Span("⏱️ ", style={'color': '#f39c12'}),
-                    html.Span("Timestamp: ", style={'fontWeight': 'bold'}),
-                    html.Span(f"{current_analysis.get('timestamp', 0):.2f}s", 
-                             style={'color': '#7f8c8d'})
-                ], style={'marginBottom': '5px'})
-                
-                # Insert timestamp info after face detection count
-                frame_info.children[1].children.insert(2, timestamp_info)
-            
-            return frame_info
+            current_frame = stored_data.get('current_frame_index', 0) + 1
+            total_frames = len(stored_data['video_frames'])
+            detections_count = len(stored_data.get('live_data', {}).get('detections', []))
+            return f"📹 Frame {current_frame}/{total_frames} - {detections_count} detections"
         
         @self.app.callback(
             Output('detection-overlay', 'children'),
@@ -1842,61 +1581,49 @@ class DashboardUI:
             Input('dashboard-state', 'data')
         )
         def update_process_button_state(stored_data):
-            """Update Process Video button state based on video availability."""
-            if not stored_data or not stored_data.get('uploaded_video_path'):
-                # No video uploaded - button disabled
-                return True, {
-                    'backgroundColor': '#95a5a6',
-                    'color': 'white',
-                    'border': 'none',
-                    'padding': '12px 24px',
-                    'borderRadius': '6px',
-                    'cursor': 'not-allowed',
-                    'fontSize': '16px',
-                    'fontWeight': 'bold',
-                    'opacity': '0.6'
-                }
-            
-            # Check if video file exists
-            video_path = stored_data['uploaded_video_path']
-            if not Path(video_path).exists():
-                return True, {
-                    'backgroundColor': '#e74c3c',
-                    'color': 'white',
-                    'border': 'none',
-                    'padding': '12px 24px',
-                    'borderRadius': '6px',
-                    'cursor': 'not-allowed',
-                    'fontSize': '16px',
-                    'fontWeight': 'bold'
-                }
-            
-            # Check if video is already processed
-            if stored_data.get('video_frames') and len(stored_data['video_frames']) > 0:
-                # Video already processed - button shows "Re-process"
+            """Update process button state based on whether a video is uploaded."""
+            if stored_data and stored_data.get('uploaded_video_path'):
+                # Check if the video file actually exists
+                video_path = Path(stored_data['uploaded_video_path'])
+                if video_path.exists():
+                    # Video is uploaded and exists, enable the button
                 return False, {
-                    'backgroundColor': '#f39c12',
-                    'color': 'white',
-                    'border': 'none',
-                    'padding': '12px 24px',
-                    'borderRadius': '6px',
-                    'cursor': 'pointer',
-                    'fontSize': '16px',
+                        'backgroundColor': '#27ae60', 
+                    'color': 'white', 
+                    'border': 'none', 
+                    'padding': '10px 20px', 
+                    'marginRight': 10,
+                    'borderRadius': '4px',
+                    'fontSize': '13px',
                     'fontWeight': 'bold',
-                    'boxShadow': '0 2px 4px rgba(0,0,0,0.2)'
+                        'cursor': 'pointer',
+                        'boxShadow': '0 2px 4px rgba(0,0,0,0.2)'
+                    }
+                else:
+                    # Video path exists but file doesn't, disable the button
+                    return True, {
+                        'backgroundColor': '#e74c3c', 
+                        'color': 'white', 
+                        'border': 'none', 
+                        'padding': '10px 20px', 
+                        'marginRight': 10,
+                        'borderRadius': '4px',
+                        'fontSize': '13px',
+                        'fontWeight': 'bold',
+                        'cursor': 'not-allowed'
                 }
             else:
-                # Video uploaded but not processed - button enabled
-                return False, {
-                    'backgroundColor': '#27ae60',
-                    'color': 'white',
-                    'border': 'none',
-                    'padding': '12px 24px',
-                    'borderRadius': '6px',
-                    'cursor': 'pointer',
-                    'fontSize': '16px',
+                # No video uploaded, disable the button
+                return True, {
+                    'backgroundColor': '#bdc3c7', 
+                    'color': '#7f8c8d', 
+                    'border': 'none', 
+                    'padding': '10px 20px', 
+                    'marginRight': 10,
+                    'borderRadius': '4px',
+                    'fontSize': '13px',
                     'fontWeight': 'bold',
-                    'boxShadow': '0 2px 4px rgba(0,0,0,0.2)'
+                    'cursor': 'not-allowed'
                 }
         
         @self.app.callback(
@@ -1906,146 +1633,6 @@ class DashboardUI:
         def update_refresh_rate(value):
             """Update refresh rate."""
             return value * 1000  # Convert to milliseconds
-        
-        @self.app.callback(
-            Output('frame-counter', 'children'),
-            Output('total-frames', 'children'),
-            Input('dashboard-state', 'data'),
-            Input('interval-component', 'n_intervals')
-        )
-        def update_frame_counter(stored_data, n):
-            """Update frame counter display."""
-            if not stored_data or not stored_data.get('video_frames'):
-                return "0/0", "0"
-            
-            current_index = stored_data.get('current_frame_index', 0)
-            total_frames = len(stored_data['video_frames'])
-            
-            if total_frames == 0:
-                return "0/0", "0"
-            
-            # Ensure index is within bounds
-            if current_index >= total_frames:
-                current_index = 0
-            
-            return f"{current_index + 1}/{total_frames}", str(total_frames)
-        
-        @self.app.callback(
-            Output('process-video-button', 'children'),
-            Input('dashboard-state', 'data')
-        )
-        def update_process_button_text(stored_data):
-            """Update Process Video button text based on video state."""
-            if not stored_data or not stored_data.get('uploaded_video_path'):
-                return "🎬 Process Video"
-            
-            # Check if video is already processed
-            if stored_data.get('video_frames') and len(stored_data['video_frames']) > 0:
-                return "🔄 Re-process Video"
-            else:
-                return "🎬 Process Video"
-        
-        @self.app.callback(
-            Output('video-preview', 'children'),
-            Input('dashboard-state', 'data'),
-            Input('interval-component', 'n_intervals')
-        )
-        def update_video_preview(stored_data, n):
-            """Update video preview area with uploaded video information."""
-            if not stored_data or not stored_data.get('uploaded_video_path'):
-                return html.Div([
-                    html.Div([
-                        html.Span("📹 ", style={'fontSize': '48px', 'color': '#bdc3c7'}),
-                        html.Br(),
-                        html.Span("No video uploaded yet", style={'color': '#7f8c8d', 'fontSize': '14px'})
-                    ], style={
-                        'textAlign': 'center',
-                        'padding': '20px',
-                        'border': '2px dashed #bdc3c7',
-                        'borderRadius': '8px',
-                        'backgroundColor': '#f8f9fa'
-                    })
-                ])
-            
-            video_path = stored_data['uploaded_video_path']
-            if not Path(video_path).exists():
-                return html.Div([
-                    html.Div([
-                        html.Span("❌ ", style={'fontSize': '48px', 'color': '#e74c3c'}),
-                        html.Br(),
-                        html.Span("Video file not found", style={'color': '#e74c3c', 'fontSize': '14px'})
-                    ], style={
-                        'textAlign': 'center',
-                        'padding': '20px',
-                        'border': '2px solid #e74c3c',
-                        'borderRadius': '8px',
-                        'backgroundColor': '#fdf2f2'
-                    })
-                ])
-            
-            # Get video information
-            file_size = Path(video_path).stat().st_size
-            file_name = Path(video_path).name
-            file_ext = Path(video_path).suffix.upper()
-            
-            # Check if video is processed
-            is_processed = stored_data.get('video_frames') and len(stored_data['video_frames']) > 0
-            
-            # Create video preview
-            preview_content = html.Div([
-                html.Div([
-                    # Video icon and status
-                    html.Div([
-                        html.Span("🎬", style={'fontSize': '48px', 'color': '#27ae60' if is_processed else '#3498db'}),
-                        html.Br(),
-                        html.Span("✅ Uploaded", style={'color': '#27ae60', 'fontWeight': 'bold', 'fontSize': '16px'})
-                    ], style={'textAlign': 'center', 'marginBottom': '15px'}),
-                    
-                    # Video details
-                    html.Div([
-                        html.H4(file_name, style={'color': '#2c3e50', 'marginBottom': '10px', 'wordBreak': 'break-word'}),
-                        
-                        html.Div([
-                            html.Span("📁 Format: ", style={'fontWeight': 'bold'}),
-                            html.Span(file_ext, style={'color': '#3498db'})
-                        ], style={'marginBottom': '5px'}),
-                        
-                        html.Div([
-                            html.Span("💾 Size: ", style={'fontWeight': 'bold'}),
-                            html.Span(f"{file_size / (1024*1024):.1f} MB", style={'color': '#7f8c8d'})
-                        ], style={'marginBottom': '5px'}),
-                        
-                        html.Div([
-                            html.Span("📂 Location: ", style={'fontWeight': 'bold'}),
-                            html.Span(Path(video_path).parent.name, style={'color': '#95a5a6'})
-                        ], style={'marginBottom': '15px'}),
-                        
-                        # Processing status
-                        html.Div([
-                            html.Span("🔄 Status: ", style={'fontWeight': 'bold'}),
-                            html.Span(
-                                "✅ Processed" if is_processed else "⏳ Ready to Process",
-                                style={'color': '#27ae60' if is_processed else '#f39c12', 'fontWeight': 'bold'}
-                            )
-                        ], style={
-                            'padding': '10px',
-                            'backgroundColor': '#d4edda' if is_processed else '#fff3cd',
-                            'border': '1px solid #c3e6cb' if is_processed else '#ffc107',
-                            'borderRadius': '4px',
-                            'textAlign': 'center'
-                        })
-                        
-                    ], style={'textAlign': 'left'})
-                    
-                ], style={
-                    'padding': '20px',
-                    'border': '2px solid #27ae60' if is_processed else '#3498db',
-                    'borderRadius': '8px',
-                    'backgroundColor': '#f8fff9' if is_processed else '#f8f9fa'
-                })
-            ])
-            
-            return preview_content
     
     def _create_empty_chart(self, message: str):
         """Create an empty chart with message."""
@@ -2123,75 +1710,6 @@ class DashboardUI:
         @self.app.server.route('/health')
         def health_check():
             return {'status': 'healthy', 'timestamp': time.time()}
-        
-        # Add debug endpoint for upload issues
-        @self.app.server.route('/debug/upload')
-        def debug_upload():
-            """Debug endpoint for upload issues."""
-            try:
-                import json
-                debug_info = {
-                    'temp_dir_exists': Path("data/temp").exists(),
-                    'raw_videos_dir_exists': Path("data/raw_videos").exists(),
-                    'temp_dir_contents': [],
-                    'raw_videos_contents': [],
-                    'disk_space': {},
-                    'permissions': {}
-                }
-                
-                # Check temp directory
-                temp_dir = Path("data/temp")
-                if temp_dir.exists():
-                    debug_info['temp_dir_contents'] = [
-                        {
-                            'name': f.name,
-                            'size': f.stat().st_size,
-                            'modified': f.stat().st_mtime,
-                            'exists': f.exists()
-                        }
-                        for f in temp_dir.glob("*")
-                    ]
-                
-                # Check raw_videos directory
-                raw_videos_dir = Path("data/raw_videos")
-                if raw_videos_dir.exists():
-                    debug_info['raw_videos_contents'] = [
-                        {
-                            'name': f.name,
-                            'size': f.stat().st_size,
-                            'modified': f.stat().st_mtime,
-                            'exists': f.exists()
-                        }
-                        for f in raw_videos_dir.glob("*")
-                    ]
-                
-                # Check disk space
-                try:
-                    import shutil
-                    total, used, free = shutil.disk_usage("data")
-                    debug_info['disk_space'] = {
-                        'total_gb': total / (1024**3),
-                        'used_gb': used / (1024**3),
-                        'free_gb': free / (1024**3)
-                    }
-                except Exception as e:
-                    debug_info['disk_space'] = {'error': str(e)}
-                
-                # Check permissions
-                try:
-                    debug_info['permissions'] = {
-                        'temp_dir_writable': os.access("data/temp", os.W_OK),
-                        'raw_videos_dir_writable': os.access("data/raw_videos", os.W_OK),
-                        'current_user': os.getenv('USER', 'unknown'),
-                        'current_working_dir': os.getcwd()
-                    }
-                except Exception as e:
-                    debug_info['permissions'] = {'error': str(e)}
-                
-                return json.dumps(debug_info, indent=2, default=str)
-                
-            except Exception as e:
-                return f"Debug error: {str(e)}", 500
         
         # Add error handlers
         @self.app.server.errorhandler(404)
@@ -2352,114 +1870,3 @@ class DashboardUI:
             logger.warning(f"Could not kill processes on port {port}: {e}")
         
         return False
-    
-    def _verify_uploaded_video(self, video_path: str) -> bool:
-        """Verify that an uploaded video file is valid and accessible."""
-        try:
-            if not video_path or not Path(video_path).exists():
-                logger.error(f"Video file not found: {video_path}")
-                return False
-            
-            video_file = Path(video_path)
-            file_size = video_file.stat().st_size
-            
-            if file_size == 0:
-                logger.error(f"Video file is empty: {video_path}")
-                return False
-            
-            # Try to open the video with OpenCV to verify it's a valid video file
-            try:
-                cap = cv2.VideoCapture(str(video_path))
-                if not cap.isOpened():
-                    logger.error(f"Could not open video file with OpenCV: {video_path}")
-                    return False
-                
-                # Get basic video properties
-                total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                fps = cap.get(cv2.CAP_PROP_FPS)
-                width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                
-                cap.release()
-                
-                logger.info(f"Video verified: {total_frames} frames, {fps} fps, {width}x{height}, {file_size / (1024*1024):.1f}MB")
-                return True
-                
-            except Exception as cv_error:
-                logger.error(f"OpenCV verification failed: {cv_error}")
-                # If OpenCV fails, at least check if the file exists and has content
-                return file_size > 0
-                
-        except Exception as e:
-            logger.error(f"Video verification error: {e}")
-            return False
-    
-    def _cleanup_old_videos(self, max_age_hours: int = 24):
-        """Clean up old uploaded videos to prevent disk space issues."""
-        try:
-            temp_dir = Path("data/temp")
-            if not temp_dir.exists():
-                return
-            
-            current_time = time.time()
-            max_age_seconds = max_age_hours * 3600
-            
-            for video_file in temp_dir.glob("*.mp4"):
-                try:
-                    file_age = current_time - video_file.stat().st_mtime
-                    if file_age > max_age_seconds:
-                        video_file.unlink()
-                        logger.info(f"Cleaned up old video: {video_file}")
-                except Exception as e:
-                    logger.warning(f"Could not clean up {video_file}: {e}")
-                    
-        except Exception as e:
-            logger.error(f"Cleanup error: {e}")
-    
-    def _list_uploaded_videos(self) -> List[str]:
-        """List all uploaded videos in the system."""
-        videos = []
-        try:
-            # Check temp directory
-            temp_dir = Path("data/temp")
-            if temp_dir.exists():
-                for video_file in temp_dir.glob("*.mp4"):
-                    if video_file.exists() and video_file.stat().st_size > 0:
-                        videos.append(str(video_file))
-            
-            # Check raw_videos directory
-            raw_videos_dir = Path("data/raw_videos")
-            if raw_videos_dir.exists():
-                for video_file in raw_videos_dir.glob("*.mp4"):
-                    if video_file.exists() and video_file.stat().st_size > 0:
-                        videos.append(str(video_file))
-            
-            logger.info(f"Found {len(videos)} uploaded videos")
-            return videos
-            
-        except Exception as e:
-            logger.error(f"Error listing uploaded videos: {e}")
-            return []
-    
-    def _initialize_dashboard_state(self) -> Dict:
-        """Initialize the dashboard state with any existing uploaded videos."""
-        state = {
-            'uploaded_video_path': None,
-            'video_frames': [],
-            'current_frame_index': 0,
-            'video_analysis_data': {},
-            'live_data': {},
-            'processing_status': "Ready"
-        }
-        
-        # Check for existing uploaded videos
-        uploaded_videos = self._list_uploaded_videos()
-        if uploaded_videos:
-            # Use the most recent video
-            most_recent = max(uploaded_videos, key=lambda x: Path(x).stat().st_mtime)
-            if self._verify_uploaded_video(most_recent):
-                state['uploaded_video_path'] = most_recent
-                state['processing_status'] = f"Found existing video: {Path(most_recent).name}"
-                logger.info(f"Initialized with existing video: {most_recent}")
-        
-        return state
