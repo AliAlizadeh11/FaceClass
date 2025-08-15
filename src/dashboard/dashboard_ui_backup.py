@@ -95,7 +95,7 @@ class DashboardUI:
     
     def _process_frames_for_detection(self):
         """Process frames to get real face detection results."""
-                try:
+        try:
             import sys
             from pathlib import Path
             
@@ -170,11 +170,12 @@ class DashboardUI:
                 sys.path.insert(0, str(src_path))
             
             try:
-            from detection.face_tracker import FaceTracker
-            from config import Config
+                from detection.face_tracker import FaceTracker
+                from config import Config
             
-            config = Config()
-            face_tracker = FaceTracker(config)
+                config = Config()
+                face_tracker = FaceTracker(config)
+
             except ImportError as e:
                 logger.error(f"Failed to import face tracker: {e}")
                 # Fallback: create a simple mock detector
@@ -393,7 +394,7 @@ class DashboardUI:
             # Verify the file was written correctly
             if video_path.exists() and video_path.stat().st_size > 0:
                 logger.info(f"Successfully saved uploaded video: {video_path} ({video_path.stat().st_size} bytes)")
-            return str(video_path)
+                return str(video_path)
             else:
                 logger.error(f"File was not written correctly: {video_path}")
                 return None
@@ -916,7 +917,7 @@ class DashboardUI:
             if emotions:
                 emotion_counts = Counter(emotions)
                 dominant_emotion = emotion_counts.most_common(1)[0][0].title()
-                else:
+            else:
                 dominant_emotion = "Neutral"
             
             return str(face_count), attention_percentage, dominant_emotion
@@ -1034,7 +1035,7 @@ class DashboardUI:
                 )
             ])
             
-                fig.update_layout(
+            fig.update_layout(
                 title="Position Heatmap",
                     xaxis_title="X Position",
                     yaxis_title="Y Position",
@@ -1362,18 +1363,19 @@ class DashboardUI:
                 # Process video and update state
                     logger.info(f"Processing video: {stored_data['uploaded_video_path']}")
                 try:
-                        stored_data['processing_status'] = "🔄 Processing video... Please wait."
+                    stored_data['processing_status'] = "🔄 Processing video... Please wait."
                         
                         # Process the video
                     analysis_data = self._process_uploaded_video(stored_data['uploaded_video_path'])
                         
-                        if analysis_data and analysis_data.get('frames'):
+                    if analysis_data and analysis_data.get('frames'):
                         stored_data['video_frames'] = analysis_data['frames']
                         stored_data['current_frame_index'] = 0
-                            stored_data['live_data'] = {'detections': analysis_data.get('detections', [])}
+                        stored_data['live_data'] = {'detections': analysis_data.get('detections', [])}
                         stored_data['video_analysis_data'] = analysis_data
-                            stored_data['processing_status'] = f"✅ Processed {len(analysis_data['frames'])} frames successfully"
-                            logger.info(f"Video processed successfully: {len(analysis_data['frames'])} frames extracted")
+                        stored_data['processing_status'] = f"✅ Processed {len(analysis_data['frames'])} frames successfully"
+                        logger.info(f"Video processed successfully: {len(analysis_data['frames'])} frames extracted")
+
                     else:
                             stored_data['processing_status'] = "❌ No frames extracted from video"
                             logger.warning("No frames extracted from video")
@@ -1428,8 +1430,8 @@ class DashboardUI:
             # Return appropriate frame and status
             if self.video_frames and len(self.video_frames) > 0:
                 try:
-                frame_src = self._frame_to_base64(self.video_frames[self.current_frame_index])
-                return frame_src, self.processing_status
+                    frame_src = self._frame_to_base64(self.video_frames[self.current_frame_index])
+                    return frame_src, self.processing_status
                 except Exception as e:
                     logger.error(f"Error loading frame: {e}")
                     return self._create_simple_analysis_message(), f"Error loading frame: {str(e)}"
@@ -1587,7 +1589,7 @@ class DashboardUI:
                 video_path = Path(stored_data['uploaded_video_path'])
                 if video_path.exists():
                     # Video is uploaded and exists, enable the button
-                return False, {
+                    return False, {
                         'backgroundColor': '#27ae60', 
                     'color': 'white', 
                     'border': 'none', 
