@@ -5,7 +5,6 @@ Provides web-based interface for visualizing analysis results.
 
 import dash
 from dash import dcc, html, Input, Output, State
-from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 import plotly.express as px
 import pandas as pd
@@ -704,8 +703,7 @@ class DashboardUI:
                                 'cursor': 'pointer'
                             },
                             accept='video/*',
-                        multiple=False,
-                        max_size=100*1024*1024  # 100MB max
+                        multiple=False
                     ),
                     html.Div(id='upload-status', style={'marginTop': '10px', 'minHeight': '20px'}),
                     
@@ -1276,8 +1274,8 @@ class DashboardUI:
         )
         def handle_upload(contents, filename, stored_data):
             """Handle video upload directly."""
-            import dash
-            ctx = dash.callback_context
+            from dash import callback_context
+            ctx = callback_context
             
             # Initialize state if needed
             if stored_data is None:
@@ -1406,17 +1404,18 @@ class DashboardUI:
             return "Ready to upload video", stored_data
         
         @self.app.callback(
-            Output('dashboard-state', 'data'),
+            Output('dashboard-state', 'data', allow_duplicate=True),
             Input('process-video-button', 'n_clicks'),
             Input('clear-video-button', 'n_clicks'),
             Input('prev-frame-button', 'n_clicks'),
             Input('next-frame-button', 'n_clicks'),
-            State('dashboard-state', 'data')
+            State('dashboard-state', 'data'),
+            prevent_initial_call=True
         )
         def update_dashboard_state(process_clicks, clear_clicks, prev_clicks, next_clicks, stored_data):
             """Update and persist dashboard state."""
-            import dash
-            ctx = dash.callback_context
+            from dash import callback_context
+            ctx = callback_context
             
             # Initialize state
             if stored_data is None:
