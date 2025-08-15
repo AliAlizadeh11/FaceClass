@@ -685,10 +685,6 @@ class DashboardUI:
                             children=html.Div([
                             html.I(className="fas fa-cloud-upload-alt", style={'fontSize': '48px', 'color': '#3498db'}),
                             html.H3("Drag and Drop Video Here", style={'margin': '10px 0'}),
-                            html.P("or click to select video file", style={'margin': '5px 0'}),
-                            html.Span("(MP4, AVI, MOV, MKV, WEBM)", style={'fontSize': '12px', 'color': '#7f8c8d', 'marginTop': '5px'}),
-                                    html.Br(),
-                            html.Span("Max file size: 100MB", style={'fontSize': '10px', 'color': '#95a5a6', 'marginTop': '5px'})
                             ]),
                             style={
                                 'width': '100%',
