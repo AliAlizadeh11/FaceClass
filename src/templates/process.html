@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceClass - Processing Video</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .processing-step {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+        .processing-step.active {
+            border-left: 5px solid #667eea;
+            background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+        }
+        .processing-step.completed {
+            border-left: 5px solid #28a745;
+            background: linear-gradient(135deg, #f8fff9 0%, #ffffff 100%);
+        }
+        .step-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+        }
+        .step-icon.active {
+            color: #667eea;
+        }
+        .step-icon.completed {
+            color: #28a745;
+        }
+        .progress-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <!-- Header -->
+                <div class="text-center mb-5">
+                    <h1 class="display-4 fw-bold text-white mb-3">
+                        <i class="fas fa-cogs me-3"></i>Processing Video
+                    </h1>
+                    <p class="lead text-white-50">Analyzing classroom video for face detection and recognition</p>
+                </div>
+
+                <!-- Main Processing Container -->
+                <div class="main-container p-5">
+                    <!-- Progress Overview -->
+                    <div class="progress-container text-center">
+                        <h3 class="mb-4">
+                            <i class="fas fa-chart-line me-2"></i>Processing Progress
+                        </h3>
+                        
+                        <div class="progress mb-4" style="height: 30px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%" id="mainProgress">
+                                <span class="fw-bold">0%</span>
+                            </div>
+                        </div>
+                        
+                        <p class="text-muted" id="progressText">Initializing video processing...</p>
+                    </div>
+
+                    <!-- Processing Steps -->
+                    <div class="processing-steps">
+                        <h4 class="mb-4">
+                            <i class="fas fa-list-ol me-2"></i>Processing Steps
+                        </h4>
+                        
+                        <div class="processing-step" id="step1">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-video step-icon" id="icon1"></i>
+                                <div>
+                                    <h5 class="mb-1">Video Loading</h5>
+                                    <p class="text-muted mb-0">Loading and validating video file</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="processing-step" id="step2">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-search step-icon" id="icon2"></i>
+                                <div>
+                                    <h5 class="mb-1">Face Detection</h5>
+                                    <p class="text-muted mb-0">Detecting faces in video frames</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="processing-step" id="step3">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-route step-icon" id="icon3"></i>
+                                <div>
+                                    <h5 class="mb-1">Face Tracking</h5>
+                                    <p class="text-muted mb-0">Tracking faces across frames</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="processing-step" id="step4">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-user-check step-icon" id="icon4"></i>
+                                <div>
+                                    <h5 class="mb-1">Face Recognition</h5>
+                                    <p class="text-muted mb-0">Identifying known students</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="processing-step" id="step5">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-palette step-icon" id="icon5"></i>
+                                <div>
+                                    <h5 class="mb-1">Video Annotation</h5>
+                                    <p class="text-muted mb-0">Creating annotated video with results</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="processing-step" id="step6">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-save step-icon" id="icon6"></i>
+                                <div>
+                                    <h5 class="mb-1">Saving Results</h5>
+                                    <p class="text-muted mb-0">Saving analysis results and keyframes</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="text-center mt-5">
+                        <a href="/" class="btn btn-outline-secondary me-3">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Upload
+                        </a>
+                        <button class="btn btn-primary" id="viewResults" style="display: none;">
+                            <i class="fas fa-chart-bar me-2"></i>View Results
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Simulate processing steps
+        const steps = [
+            { id: 1, name: 'Video Loading', duration: 2000 },
+            { id: 2, name: 'Face Detection', duration: 3000 },
+            { id: 3, name: 'Face Tracking', duration: 2500 },
+            { id: 4, name: 'Face Recognition', duration: 3000 },
+            { id: 5, name: 'Video Annotation', duration: 4000 },
+            { id: 6, name: 'Saving Results', duration: 2000 }
+        ];
+
+        let currentStep = 0;
+        let mainProgress = 0;
+
+        function updateStep(stepId, status) {
+            const stepElement = document.getElementById(`step${stepId}`);
+            const iconElement = document.getElementById(`icon${stepId}`);
+            
+            stepElement.classList.remove('active', 'completed');
+            iconElement.classList.remove('active', 'completed');
+            
+            if (status === 'active') {
+                stepElement.classList.add('active');
+                iconElement.classList.add('active');
+            } else if (status === 'completed') {
+                stepElement.classList.add('completed');
+                iconElement.classList.add('completed');
+            }
+        }
+
+        function updateMainProgress(progress) {
+            const progressBar = document.getElementById('mainProgress');
+            const progressText = document.getElementById('progressText');
+            
+            progressBar.style.width = progress + '%';
+            progressBar.innerHTML = `<span class="fw-bold">${Math.round(progress)}%</span>`;
+            
+            if (progress >= 100) {
+                progressText.textContent = 'Processing complete! Ready to view results.';
+                document.getElementById('viewResults').style.display = 'inline-block';
+            }
+        }
+
+        async function processSteps() {
+            for (let i = 0; i < steps.length; i++) {
+                const step = steps[i];
+                
+                // Activate current step
+                updateStep(step.id, 'active');
+                
+                // Update progress text
+                document.getElementById('progressText').textContent = `Processing: ${step.name}...`;
+                
+                // Simulate processing time
+                await new Promise(resolve => setTimeout(resolve, step.duration));
+                
+                // Complete current step
+                updateStep(step.id, 'completed');
+                
+                // Update main progress
+                currentStep++;
+                mainProgress = (currentStep / steps.length) * 100;
+                updateMainProgress(mainProgress);
+            }
+        }
+
+        // Start processing when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(processSteps, 1000);
+        });
+
+        // Handle view results button
+        document.getElementById('viewResults').addEventListener('click', () => {
+            // In a real implementation, this would redirect to the results page
+            alert('Processing complete! Redirecting to results...');
+            // window.location.href = '/reports';
+        });
+    </script>
+</body>
+</html>

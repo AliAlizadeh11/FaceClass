@@ -1,0 +1,8 @@
+FaceClass Video Processing Summary
+========================================
+
+Video: static/processed_videos/class-vision_20250817_183823_c0ef68f6.mp4
+Duration: 31.90 seconds
+Frames: 957
+Resolution: 852x480
+

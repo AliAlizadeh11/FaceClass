@@ -1,0 +1,23 @@
+# FaceClass - Simple Dependencies (No Conflicts)
+# Essential packages only, guaranteed to work together
+
+# Core packages
+numpy>=1.21.0
+opencv-python>=4.5.0
+Pillow>=8.3.0
+scipy>=1.7.0
+
+# PyTorch ecosystem (no conflicts)
+torch>=1.9.0
+torchvision>=0.10.0
+
+# Computer vision
+mediapipe>=0.8.0
+mtcnn>=0.1.1
+
+# YOLO for detection
+ultralytics>=8.0.0
+
+# Basic utilities
+tqdm>=4.62.0
+pyyaml>=5.4.0

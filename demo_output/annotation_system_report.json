@@ -1,0 +1,56 @@
+{
+  "system_info": {
+    "name": "FaceClass Enhanced Video Annotation System",
+    "version": "2.0",
+    "features": [
+      "Real-time frame annotation",
+      "Multi-object tracking visualization",
+      "Student recognition display",
+      "Emotion detection labels",
+      "Attention status indicators",
+      "Confidence score visualization",
+      "Color-coded recognition status",
+      "Keyframe extraction",
+      "Thumbnail grid generation"
+    ]
+  },
+  "annotation_features": {
+    "bounding_boxes": {
+      "style": "Color-coded rectangles",
+      "colors": {
+        "green": "Recognized + Attentive",
+        "yellow": "Recognized + Inattentive",
+        "red": "Unknown/Unrecognized"
+      },
+      "thickness": 3
+    },
+    "labels": {
+      "student_names": "Displayed for recognized students",
+      "track_ids": "Displayed for unknown faces",
+      "font": "cv2.FONT_HERSHEY_SIMPLEX",
+      "scale": 0.6
+    },
+    "confidence_scores": {
+      "detection_confidence": "Shows face detection reliability",
+      "recognition_confidence": "Shows student identification reliability",
+      "format": "Decimal values (0.00 - 1.00)"
+    },
+    "additional_info": {
+      "emotion": "Current emotional state",
+      "attention": "Attention status (attentive/inattentive)",
+      "positioning": "Dynamic layout based on available data"
+    }
+  },
+  "output_formats": {
+    "annotated_frames": "JPG images with all annotations",
+    "annotated_videos": "MP4 videos with frame-by-frame annotations",
+    "keyframes": "Individual student face images",
+    "thumbnail_grids": "Organized collections of keyframes"
+  },
+  "performance": {
+    "frame_processing": "Real-time annotation",
+    "video_processing": "Efficient batch processing",
+    "memory_usage": "Optimized for large videos",
+    "scalability": "Handles multiple students simultaneously"
+  }
+}

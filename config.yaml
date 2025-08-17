@@ -14,15 +14,22 @@ paths:
 
 # Face Detection and Tracking Configuration
 face_detection:
-  model: "opencv"  # Options: yolo, retinaface, mtcnn, opencv
+  model: "yolo"  # Options: yolo, mtcnn, opencv
   confidence_threshold: 0.5
   nms_threshold: 0.4
   min_face_size: 20
   max_faces: 50
 
+# Face Tracking Configuration
+face_tracking:
+  max_age: 30  # Maximum frames to keep a track alive
+  min_hits: 3  # Minimum detections before confirming a track
+  iou_threshold: 0.3  # IoU threshold for track association
+  confidence_threshold: 0.5  # Confidence threshold for tracking
+
 # Face Recognition Configuration
 face_recognition:
-  model: "arcface"  # Options: arcface, facenet, vggface, opencv
+  model: "arcface"  # Options: arcface, facenet, deepface, opencv
   similarity_threshold: 0.6
   embedding_size: 512
   database_path: "data/labeled_faces/face_database.pkl"
@@ -50,6 +57,8 @@ video_processing:
   batch_size: 4
   keyframe_interval: 1.0  # seconds
   max_video_duration: 3600  # 1 hour
+  save_annotated_video: true
+  save_processing_results: true
 
 # Heatmap and Spatial Analysis Configuration
 heatmap:
@@ -97,8 +106,4 @@ evaluation:
 
 # Reporting Configuration
 reporting:
-  generate_reports: true
-  report_format: "html"  # Options: html, pdf, json
-  include_charts: true
-  include_heatmaps: true
-  include_statistics: true 
+  generate_reports: true 

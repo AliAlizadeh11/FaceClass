@@ -1,0 +1,27 @@
+{
+  "face_detection": {
+    "model": "retinaface",
+    "confidence_threshold": 0.8,
+    "min_face_size": 80
+  },
+  "face_tracking": {
+    "algorithm": "deep_ocsort",
+    "persistence_frames": 30,
+    "multi_camera": true,
+    "max_age": 30,
+    "min_hits": 3
+  },
+  "face_quality": {
+    "min_face_size": 80,
+    "min_resolution": 64,
+    "min_contrast": 30,
+    "max_blur": 100,
+    "min_eye_openness": 0.3
+  },
+  "database": {
+    "max_faces_per_person": 20,
+    "min_quality_score": 0.7,
+    "enable_auto_optimization": true,
+    "backup_interval": 24
+  }
+}

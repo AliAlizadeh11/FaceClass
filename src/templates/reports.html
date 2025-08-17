@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceClass - Analysis Results</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .result-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+        }
+        .result-card:hover {
+            transform: translateY(-5px);
+        }
+        .video-container {
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        .video-container video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .student-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .student-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+        }
+        .student-card:hover {
+            transform: translateY(-5px);
+        }
+        .student-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #f8f9fa;
+        }
+        .student-info {
+            padding: 20px;
+        }
+        .confidence-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 8px;
+            margin: 10px 0;
+        }
+        .confidence-fill {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 600;
+        }
+        .keyframe-placeholder {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #6c757d;
+            font-size: 1.2rem;
+        }
+        .processing-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        {% if error %}
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="processing-error">
+                    <h3><i class="fas fa-exclamation-triangle me-2"></i>Error</h3>
+                    <p>{{ error }}</p>
+                    <a href="/" class="btn btn-primary">Back to Upload</a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        
+        <!-- Header -->
+        <div class="text-center mb-5">
+            <h1 class="display-4 fw-bold text-white mb-3">
+                <i class="fas fa-chart-bar me-3"></i>Analysis Results
+            </h1>
+            <p class="lead text-white-50">Video processing completed successfully</p>
+        </div>
+
+        <!-- Session Information -->
+        <div class="main-container p-4 mb-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h4><i class="fas fa-info-circle me-2"></i>Session Information</h4>
+                    <p class="mb-1"><strong>Session ID:</strong> {{ session_data.session_id }}</p>
+                    <p class="mb-1"><strong>Upload Time:</strong> {{ session_data.upload_time }}</p>
+                    <p class="mb-0"><strong>Status:</strong> 
+                        <span class="badge bg-success">{{ session_data.status }}</span>
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="/" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>New Analysis
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Statistics -->
+        <div class="main-container p-4 mb-4">
+            <h4 class="mb-4">
+                <i class="fas fa-chart-pie me-2"></i>Processing Statistics
+            </h4>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">{{ results.processing_stats.frames_processed if results.processing_stats else 0 }}</div>
+                    <div>Frames Processed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ results.processing_stats.total_detections if results.processing_stats else 0 }}</div>
+                    <div>Total Detections</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ results.processing_stats.total_tracks if results.processing_stats else 0 }}</div>
+                    <div>Total Tracks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ results.processing_stats.total_recognitions if results.processing_stats else 0 }}</div>
+                    <div>Total Recognitions</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Annotated Video Preview -->
+        {% if annotated_video %}
+        <div class="main-container p-4 mb-4">
+            <h4 class="mb-4">
+                <i class="fas fa-video me-2"></i>Annotated Video Preview
+            </h4>
+            
+            <div class="video-container">
+                <video controls class="w-100">
+                    <source src="{{ annotated_video }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            
+            <div class="mt-3">
+                <p class="text-muted mb-2">
+                    <i class="fas fa-info-circle me-2"></i>
+                    This video shows the original footage with annotations including:
+                </p>
+                <ul class="text-muted">
+                    <li><strong>Green boxes:</strong> Recognized and attentive students</li>
+                    <li><strong>Yellow boxes:</strong> Recognized but inattentive students</li>
+                    <li><strong>Red boxes:</strong> Unknown/unrecognized faces</li>
+                    <li><strong>Labels:</strong> Student names, emotions, and attention status</li>
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Detected Students -->
+        {% if students %}
+        <div class="main-container p-4 mb-4">
+            <h4 class="mb-4">
+                <i class="fas fa-users me-2"></i>Detected Students
+            </h4>
+            
+            <div class="student-grid">
+                {% for student in students %}
+                <div class="student-card">
+                    {% if student.keyframe %}
+                    <img src="{{ student.keyframe }}" alt="Student {{ student.id }}" class="student-image">
+                    {% else %}
+                    <div class="keyframe-placeholder">
+                        <i class="fas fa-user fa-3x"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="student-info">
+                        <h5 class="mb-2">
+                            {% if student.id != 'unknown' %}
+                                <i class="fas fa-user-check text-success me-2"></i>{{ student.id }}
+                            {% else %}
+                                <i class="fas fa-user-question text-warning me-2"></i>Unknown Student
+                            {% endif %}
+                        </h5>
+                        
+                        <p class="mb-2"><strong>Track ID:</strong> {{ student.track_id }}</p>
+                        <p class="mb-2"><strong>Frames Detected:</strong> {{ student.frames_detected }}</p>
+                        
+                        {% if student.confidence %}
+                        <div class="mb-2">
+                            <strong>Recognition Confidence:</strong>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width: {{ (student.confidence * 100) | round }}%"></div>
+                            </div>
+                            <small class="text-muted">{{ (student.confidence * 100) | round }}%</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Keyframes Grid -->
+        {% if keyframes %}
+        <div class="main-container p-4 mb-4">
+            <h4 class="mb-4">
+                <i class="fas fa-images me-2"></i>Keyframe Images
+            </h4>
+            
+            <div class="row">
+                {% for keyframe in keyframes %}
+                <div class="col-md-4 col-lg-3 mb-3">
+                    <div class="result-card p-0 overflow-hidden">
+                        <img src="{{ keyframe }}" alt="Keyframe" class="w-100" style="height: 200px; object-fit: cover;">
+                        <div class="p-3">
+                            <small class="text-muted">{{ keyframe.split('/')[-1] }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Video Information -->
+        {% if results.video_info %}
+        <div class="main-container p-4 mb-4">
+            <h4 class="mb-4">
+                <i class="fas fa-file-video me-2"></i>Video Information
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Original Path:</strong> {{ results.video_info.path }}</p>
+                    <p><strong>Resolution:</strong> {{ results.video_info.resolution }}</p>
+                    <p><strong>FPS:</strong> {{ results.video_info.fps }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Duration:</strong> {{ "%.2f"|format(results.video_info.duration) }} seconds</p>
+                    <p><strong>Total Frames:</strong> {{ results.video_info.total_frames }}</p>
+                    <p><strong>Processing Time:</strong> {{ "%.2f"|format(results.processing_time) }} seconds</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Action Buttons -->
+        <div class="text-center">
+            <a href="/" class="btn btn-primary me-3">
+                <i class="fas fa-upload me-2"></i>Upload New Video
+            </a>
+            {% if annotated_video %}
+            <a href="{{ annotated_video }}" class="btn btn-outline-primary me-3" download>
+                <i class="fas fa-download me-2"></i>Download Annotated Video
+            </a>
+            {% endif %}
+        </div>
+
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Add any interactive functionality here
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate confidence bars
+            const confidenceBars = document.querySelectorAll('.confidence-fill');
+            confidenceBars.forEach(bar => {
+                const width = bar.style.width;
+                bar.style.width = '0%';
+                setTimeout(() => {
+                    bar.style.width = width;
+                }, 500);
+            });
+            
+            // Add click handlers for student cards
+            const studentCards = document.querySelectorAll('.student-card');
+            studentCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    // Add any student-specific actions here
+                    console.log('Student card clicked');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

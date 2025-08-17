@@ -1,0 +1,90 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaceClass Demo Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+        h1 { color: #333; text-align: center; }
+        .video-section { margin: 30px 0; }
+        video { width: 100%; max-width: 800px; display: block; margin: 20px auto; }
+        .grid-section { margin: 30px 0; }
+        .keyframe-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .keyframe { text-align: center; }
+        .keyframe img { width: 100%; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .feature-list { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .feature-list h3 { color: #495057; }
+        .feature-list ul { color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 FaceClass Enhanced Video Annotation System</h1>
+        
+        <div class="feature-list">
+            <h3>✨ Features Demonstrated:</h3>
+            <ul>
+                <li>Frame-by-frame analysis with face detection</li>
+                <li>Unique tracking IDs maintained across frames</li>
+                <li>Confidence scores displayed as percentages</li>
+                <li>Clear student identification on every frame</li>
+                <li>Color-coded recognition status</li>
+                <li>Keyframe extraction and organization</li>
+                <li>Complete annotated video output</li>
+            </ul>
+        </div>
+        
+        <div class="video-section">
+            <h2>🎬 Annotated Video</h2>
+            <p>This video shows the complete frame-by-frame analysis with all annotations:</p>
+            <video controls>
+                <source src="/static/processed_videos/comprehensive_demo_annotated.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        
+        <div class="grid-section">
+            <h2>🖼️ Student Keyframes</h2>
+            <p>Individual keyframes extracted for each detected student:</p>
+            <div class="keyframe-grid">
+                <div class="keyframe">
+                    <img src="/static/keyframes/Alice_1_comprehensive_demo.jpg" alt="Alice">
+                    <p><strong>Alice</strong><br>Track ID: 1</p>
+                </div>
+                <div class="keyframe">
+                    <img src="/static/keyframes/Bob_2_comprehensive_demo.jpg" alt="Bob">
+                    <p><strong>Bob</strong><br>Track ID: 2</p>
+                </div>
+                <div class="keyframe">
+                    <img src="/static/keyframes/Carol_3_comprehensive_demo.jpg" alt="Carol">
+                    <p><strong>Carol</strong><br>Track ID: 3</p>
+                </div>
+                <div class="keyframe">
+                    <img src="/static/keyframes/David_4_comprehensive_demo.jpg" alt="David">
+                    <p><strong>David</strong><br>Track ID: 4</p>
+                </div>
+                <div class="keyframe">
+                    <img src="/static/keyframes/Eva_5_comprehensive_demo.jpg" alt="Eva">
+                    <p><strong>Eva</strong><br>Track ID: 5</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="feature-list">
+            <h3>🎯 What Each Frame Shows:</h3>
+            <ul>
+                <li><strong>Green boxes:</strong> Recognized and attentive students</li>
+                <li><strong>Yellow boxes:</strong> Recognized but inattentive students</li>
+                <li><strong>Red boxes:</strong> Unknown/unrecognized faces</li>
+                <li><strong>Labels:</strong> Student names, track IDs, confidence scores</li>
+                <li><strong>Confidence:</strong> Detection and recognition scores as percentages</li>
+                <li><strong>Tracking:</strong> Consistent IDs maintained across all frames</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
+    
