@@ -87,6 +87,11 @@ def frame_analysis():
     """Frame-by-frame analysis interface."""
     return render_template('frame_analysis.html')
 
+@app.route('/video-frames')
+def video_frames():
+    """Video frames with face detection display interface."""
+    return render_template('video_frames_display.html')
+
 @app.route('/team1-dashboard')
 def team1_dashboard():
     """Team 1 Dashboard - Model comparison, tracking, quality assessment."""
@@ -741,24 +746,206 @@ def analyze_frame():
         logger.error(f"Frame analysis error: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/process-video-frames', methods=['POST'])
+def process_video_frames():
+    """Process video and extract frames with face detection for website display."""
+    try:
+        # Check if video file is uploaded
+        if 'video' not in request.files:
+            return jsonify({'error': 'No video file provided'}), 400
+        
+        video_file = request.files['video']
+        
+        if video_file.filename == '':
+            return jsonify({'error': 'No video file selected'}), 400
+        
+        # Create a temporary video file
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_video:
+            video_file.save(temp_video.name)
+            temp_video_path = temp_video.name
+        
+        try:
+            # Get video information
+            cap = cv2.VideoCapture(temp_video_path)
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            fps = float(cap.get(cv2.CAP_PROP_FPS))  # Convert to float
+            duration = float(total_frames / fps) if fps > 0 else 0.0  # Convert to float
+            
+            # Extract key frames (every 10th frame for performance)
+            frame_interval = max(1, total_frames // 20)  # Get ~20 frames
+            processed_frames = []
+            
+            logger.info(f"Processing video: {total_frames} frames, {fps} FPS, {duration:.2f}s duration")
+            
+            # Limit to maximum 15 frames for faster processing
+            max_frames = min(15, total_frames // frame_interval)
+            frame_interval = max(1, total_frames // max_frames)
+            
+            logger.info(f"Processing {max_frames} frames with interval {frame_interval}")
+            
+            for i, frame_num in enumerate(range(0, total_frames, frame_interval)):
+                if i >= max_frames:  # Stop after max_frames
+                    break
+                    
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
+                ret, frame = cap.read()
+                
+                if ret:
+                    # Detect faces in this frame
+                    annotated_frame, face_detections, detection_method = detect_faces_in_frame(frame)
+                    
+                    # Convert frame to base64
+                    import base64
+                    _, buffer = cv2.imencode('.jpg', annotated_frame)
+                    img_base64 = base64.b64encode(buffer).decode('utf-8')
+                    
+                    # Ensure all data is JSON-serializable
+                    serializable_detections = []
+                    for face in face_detections:
+                        serializable_face = {
+                            'face_id': int(face['face_id']),
+                            'bbox': [int(x) for x in face['bbox']],
+                            'confidence': float(face['confidence']),
+                            'method': str(face['method'])
+                        }
+                        serializable_detections.append(serializable_face)
+                    
+                    processed_frames.append({
+                        'frame_number': int(frame_num),
+                        'faces_detected': int(len(serializable_detections)),
+                        'face_detections': serializable_detections,
+                        'annotated_frame': f'data:image/jpeg;base64,{img_base64}',
+                        'detection_method': str(detection_method)
+                    })
+                    
+                    logger.info(f"Processed frame {frame_num}: {len(serializable_detections)} faces detected")
+            
+            cap.release()
+            
+            # Clean up temp video file
+            os.unlink(temp_video_path)
+            
+            logger.info(f"Video processing completed: {len(processed_frames)} frames processed")
+            
+            return jsonify({
+                'success': True,
+                'total_frames': int(total_frames),
+                'fps': float(fps),
+                'duration': float(duration),
+                'processed_frames': processed_frames,
+                'message': f'Processed {len(processed_frames)} frames with face detection'
+            })
+            
+        except Exception as e:
+            # Clean up temp video file on error
+            if os.path.exists(temp_video_path):
+                os.unlink(temp_video_path)
+            raise e
+            
+    except Exception as e:
+        logger.error(f"Video processing error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 def detect_faces_in_frame(frame):
-    """Detect faces in a frame using available methods."""
-    # Use MediaPipe face detection if available
+    """Detect faces in a frame using multiple methods for maximum coverage."""
+    all_faces = []
+    detection_methods_used = []
+    
+    # Method 1: OpenCV DNN (most reliable)
+    try:
+        # Load pre-trained face detection model
+        model_path = "models/face_detection/opencv_face_detector_uint8.pb"
+        config_path = "models/face_detection/opencv_face_detector.pbtxt"
+        
+        if os.path.exists(model_path) and os.path.exists(config_path):
+            net = cv2.dnn.readNet(model_path, config_path)
+            
+            # Prepare input blob
+            blob = cv2.dnn.blobFromImage(frame, 1.0, (300, 300), [104, 117, 123], False, False)
+            net.setInput(blob)
+            detections = net.forward()
+            
+            for i in range(detections.shape[2]):
+                confidence = detections[0, 0, i, 2]
+                
+                # Lower confidence threshold to catch more faces
+                if confidence > 0.3:  # Reduced from 0.5 to 0.3
+                    # Get bounding box coordinates
+                    x1 = int(detections[0, 0, i, 3] * frame.shape[1])
+                    y1 = int(detections[0, 0, i, 4] * frame.shape[0])
+                    x2 = int(detections[0, 0, i, 5] * frame.shape[1])
+                    y2 = int(detections[0, 0, i, 6] * frame.shape[0])
+                    
+                    all_faces.append({
+                        'bbox': [int(x1), int(y1), int(x2), int(y2)],  # Convert to int
+                        'confidence': float(confidence),  # Convert to float
+                        'method': 'OpenCV DNN'
+                    })
+                    detection_methods_used.append('OpenCV DNN')
+            
+        else:
+            # If model files don't exist, use Haar cascade as fallback
+            raise FileNotFoundError("DNN model files not found")
+            
+    except Exception as e:
+        logger.error(f"OpenCV DNN detection error: {e}")
+        # Continue to other methods
+        pass
+    
+    # Method 2: Haar Cascade with multiple scales (more sensitive)
+    try:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        
+        # Use fewer scale factors for faster processing
+        scale_factors = [1.1, 1.2]  # Reduced from 5 to 2
+        min_neighbors_options = [4]  # Reduced from 3 to 1
+        
+        for scale_factor in scale_factors:
+            for min_neighbors in min_neighbors_options:
+                faces = face_cascade.detectMultiScale(gray, scale_factor, min_neighbors, minSize=(20, 20))
+                
+                for (x, y, w, h) in faces:
+                    # Check if this face overlaps significantly with already detected faces
+                    is_duplicate = False
+                    for existing_face in all_faces:
+                        existing_bbox = existing_face['bbox']
+                        # Calculate overlap
+                        overlap_x = max(0, min(x + w, existing_bbox[2]) - max(x, existing_bbox[0]))
+                        overlap_y = max(0, min(y + h, existing_bbox[3]) - max(y, existing_bbox[1]))
+                        overlap_area = overlap_x * overlap_y
+                        face_area = w * h
+                        
+                        if overlap_area > face_area * 0.5:  # 50% overlap threshold
+                            is_duplicate = True
+                            break
+                    
+                    if not is_duplicate:
+                        all_faces.append({
+                            'bbox': [int(x), int(y), int(x + w), int(y + h)],  # Convert to int
+                            'confidence': 0.8,  # Default confidence for Haar
+                            'method': 'Haar Cascade'
+                        })
+                        detection_methods_used.append('Haar Cascade')
+                        
+    except Exception as e:
+        logger.error(f"Haar cascade detection error: {e}")
+        pass
+    
+    # Method 3: MediaPipe (if available)
     if MEDIAPIPE_AVAILABLE:
         try:
             with mp_face_detection.FaceDetection(
-                model_selection=1, min_detection_confidence=0.5
+                model_selection=1, min_detection_confidence=0.3  # Lower threshold
             ) as face_detection:
                 
                 # Convert BGR to RGB
                 rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 results = face_detection.process(rgb_frame)
                 
-                annotated_frame = frame.copy()
-                face_detections = []
-                
                 if results.detections:
-                    for i, detection in enumerate(results.detections):
+                    for detection in results.detections:
                         bboxC = detection.location_data.relative_bounding_box
                         ih, iw, _ = frame.shape
                         
@@ -774,102 +961,63 @@ def detect_faces_in_frame(frame):
                         x2 = min(iw, x2)
                         y2 = min(ih, y2)
                         
-                        # Draw bounding box
-                        cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                        # Check for duplicates
+                        is_duplicate = False
+                        for existing_face in all_faces:
+                            existing_bbox = existing_face['bbox']
+                            overlap_x = max(0, min(x2, existing_bbox[2]) - max(x1, existing_bbox[0]))
+                            overlap_y = max(0, min(y2, existing_bbox[3]) - max(y1, existing_bbox[1]))
+                            overlap_area = overlap_x * overlap_y
+                            face_area = (x2 - x1) * (y2 - y1)
+                            
+                            if overlap_area > face_area * 0.5:
+                                is_duplicate = True
+                                break
                         
-                        # Add face ID and confidence
-                        confidence = detection.score[0]
-                        cv2.putText(annotated_frame, f"Face {i+1} ({confidence:.2f})", 
-                                   (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                        
-                        face_detections.append({
-                            'face_id': i+1,
-                            'bbox': [x1, y1, x2, y2],
-                            'confidence': float(confidence)
-                        })
-                
-                return annotated_frame, face_detections, 'MediaPipe'
+                        if not is_duplicate:
+                            confidence = detection.score[0]
+                            all_faces.append({
+                                'bbox': [int(x1), int(y1), int(x2), int(y2)],  # Convert to int
+                                'confidence': float(confidence),  # Convert to float
+                                'method': 'MediaPipe'
+                            })
+                            detection_methods_used.append('MediaPipe')
                 
         except Exception as e:
             logger.error(f"MediaPipe detection error: {e}")
-            # Fallback to OpenCV
             pass
     
-    # Fallback detection using OpenCV DNN
-    try:
-        # Load pre-trained face detection model
-        model_path = "models/face_detection/opencv_face_detector_uint8.pb"
-        config_path = "models/face_detection/opencv_face_detector.pbtxt"
-        
-        # If model files don't exist, use Haar cascade as final fallback
-        if os.path.exists(model_path) and os.path.exists(config_path):
-            net = cv2.dnn.readNet(model_path, config_path)
-            
-            # Prepare input blob
-            blob = cv2.dnn.blobFromImage(frame, 1.0, (300, 300), [104, 117, 123], False, False)
-            net.setInput(blob)
-            detections = net.forward()
-            
-            annotated_frame = frame.copy()
-            face_detections = []
-            
-            for i in range(detections.shape[2]):
-                confidence = detections[0, 0, i, 2]
-                
-                if confidence > 0.5:  # Confidence threshold
-                    # Get bounding box coordinates
-                    x1 = int(detections[0, 0, i, 3] * frame.shape[1])
-                    y1 = int(detections[0, 0, i, 4] * frame.shape[0])
-                    x2 = int(detections[0, 0, i, 5] * frame.shape[1])
-                    y2 = int(detections[0, 0, i, 6] * frame.shape[0])
-                    
-                    # Draw bounding box
-                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                    
-                    # Add face ID and confidence
-                    cv2.putText(annotated_frame, f"Face {i+1} ({confidence:.2f})", 
-                               (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                    
-                    face_detections.append({
-                        'face_id': i+1,
-                        'bbox': [x1, y1, x2, y2],
-                        'confidence': float(confidence)
-                    })
-            
-            return annotated_frame, face_detections, 'OpenCV DNN'
-            
-        else:
-            # Final fallback: Haar cascade
-            raise FileNotFoundError("DNN model files not found")
-            
-    except Exception as e:
-        logger.error(f"OpenCV DNN detection error: {e}")
-        # Final fallback: Haar cascade
-        pass
+    # Remove duplicate faces and assign IDs
+    final_faces = []
+    for i, face in enumerate(all_faces):
+        face['face_id'] = int(i + 1)  # Convert to int
+        final_faces.append(face)
     
-    # Final fallback: Haar cascade (always available with OpenCV)
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-    
+    # Create annotated frame
     annotated_frame = frame.copy()
-    face_detections = []
     
-    for i, (x, y, w, h) in enumerate(faces):
+    # Draw all detected faces
+    for face in final_faces:
+        x1, y1, x2, y2 = face['bbox']
+        
         # Draw bounding box
-        cv2.rectangle(annotated_frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+        cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         
-        # Add face ID label
-        cv2.putText(annotated_frame, f"Face {i+1}", 
-                   (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        # Add face ID and confidence
+        cv2.putText(annotated_frame, f"Face {face['face_id']} ({face['confidence']:.2f})", 
+                   (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
         
-        face_detections.append({
-            'face_id': i+1,
-            'bbox': [x, y, x+w, y+h],
-            'confidence': 0.8  # Default confidence for OpenCV
-        })
+        # Add detection method
+        cv2.putText(annotated_frame, face['method'], 
+                   (x1, y2+20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
     
-    return annotated_frame, face_detections, 'OpenCV Haar Cascade'
+    # Determine detection method for return
+    if detection_methods_used:
+        detection_method = f"Combined: {', '.join(set(detection_methods_used))}"
+    else:
+        detection_method = "OpenCV Haar Cascade (fallback)"
+    
+    return annotated_frame, final_faces, detection_method
 
 @app.route('/static/<path:filename>')
 def static_files(filename):

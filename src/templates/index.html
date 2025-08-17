@@ -257,6 +257,9 @@
                         <button class="btn btn-custom" id="goToFrameAnalysis" disabled>
                             <i class="fas fa-film"></i> Frame-by-Frame Analysis
                         </button>
+                        <button class="btn btn-secondary-custom ms-3" id="goToVideoFrames" disabled>
+                            <i class="fas fa-images"></i> Video Frames with Face Detection
+                        </button>
                     </div>
                     
                     <!-- Progress Section -->
@@ -307,6 +310,7 @@
             const uploadArea = document.getElementById('uploadArea');
             const videoFile = document.getElementById('videoFile');
             const goToFrameAnalysis = document.getElementById('goToFrameAnalysis');
+            const goToVideoFrames = document.getElementById('goToVideoFrames');
             const progressSection = document.getElementById('progressSection');
             const progressBar = document.getElementById('progressBar');
             const progressText = document.getElementById('progressText');
@@ -348,6 +352,7 @@
                         <small class="text-muted">Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB</small>
                     `;
                     goToFrameAnalysis.disabled = false;
+                    goToVideoFrames.disabled = false;
                 } else {
                     alert('Please select a valid video file.');
                 }
@@ -370,6 +375,17 @@
                 
                 // Navigate to frame analysis
                 window.location.href = '/frame-analysis';
+            });
+            
+            // Go to video frames with face detection
+            goToVideoFrames.addEventListener('click', () => {
+                if (!videoFile.files[0]) {
+                    alert('Please select a video file first.');
+                    return;
+                }
+                
+                // Navigate to video frames display
+                window.location.href = '/video-frames';
             });
         });
     </script>
