@@ -1,6 +1,45 @@
-# FaceClass - Comprehensive Student Attendance Analysis System
+## FaceClass - Comprehensive Student Attendance Analysis System
 
-A sophisticated computer vision-based system for analyzing student attendance, emotions, attention, and behavior patterns in classroom environments.
+A practical computer vision system for classroom analysis: attendance, emotions, attention, and reporting.
+
+### Quick Start
+
+1. Install Python 3.9+ and ffmpeg
+2. Create a virtual environment and install minimal dependencies:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
+3. Launch the Flask web app (dashboard):
+   ```bash
+   python src/app.py
+   # open http://localhost:5000
+   ```
+4. Run the CLI (pipeline) on a video:
+   ```bash
+   python src/main.py --video test_website_video.mp4 --mode full
+   ```
+5. Run unit tests for core services (if pytest is installed):
+   ```bash
+   pytest -q test_attention_analysis_unit.py test_emotion_analysis_unit.py test_attendance_manager_unit.py
+   ```
+
+### Dependencies
+
+The default `requirements.txt` lists minimal, conflict-free packages (OpenCV, Flask, Dash, Plotly). Optional heavy frameworks (YOLO/Ultralytics, InsightFace, FaceNet, DeepFace) are not required for basic operation. The code will gracefully fall back to classical methods if those packages are not installed.
+
+Optional installs to enable extra features:
+- YOLOv8 detection: `pip install ultralytics`
+- ArcFace recognition: `pip install insightface onnxruntime`
+- FaceNet embeddings: `pip install facenet-pytorch torch torchvision`
+- DeepFace (emotion/recognition): `pip install deepface`
+
+### Repository hygiene
+
+- Generated outputs and large media are ignored via `.gitignore` (e.g., `data/outputs/`, `static/processed_videos/`).
+- Legacy demo/experimental scripts were removed for maintainability.
+- Service modules include docstrings and follow PEP8 style.
 
 ## 🎯 Project Overview
 

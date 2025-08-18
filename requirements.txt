@@ -1,64 +1,20 @@
-# FaceClass - Comprehensive Student Attendance Analysis System
-# Core dependencies for computer vision and deep learning
+# FaceClass - Minimal, production-focused dependencies
 
-# Core Python packages
+# Core
 numpy>=1.21.0
 opencv-python>=4.5.0
-Pillow>=8.3.0
-scipy>=1.7.0
+pyyaml>=5.4.0
 
-# Deep learning frameworks - PyTorch only (no TensorFlow conflicts)
-torch>=1.9.0
-torchvision>=0.10.0
-
-# Computer vision and face detection
-mediapipe>=0.8.0
-dlib>=19.22.0
-face-recognition>=1.3.0
-mtcnn>=0.1.1
-
-# New dependencies for improved pipeline - PyTorch-based only
-ultralytics>=8.0.0  # YOLOv8 support
-insightface>=0.7.3  # ArcFace recognition
-facenet-pytorch>=0.5.3  # FaceNet recognition (PyTorch-based)
-
-# Data processing and analysis
-pandas>=1.3.0
-scikit-learn>=1.0.0
-matplotlib>=3.4.0
-seaborn>=0.11.0
-plotly>=5.0.0
-
-# Web framework and dashboard
+# Web and dashboard
+Flask>=2.0.0
 dash>=2.0.0
 dash-bootstrap-components>=1.0.0
-Flask>=2.0.0
-jinja2>=3.0.0
+plotly>=5.0.0
+requests>=2.26.0
 
-# Data visualization
-bokeh>=2.3.0
-altair>=4.1.0
-
-# Image processing
+# Media IO
 imageio>=2.9.0
 imageio-ffmpeg>=0.4.5
 
-# Utilities
-tqdm>=4.62.0
-pyyaml>=5.4.0
-python-dateutil>=2.8.0
-pytz>=2021.1
-
-# Development and testing
+# Testing
 pytest>=6.2.0
-pytest-cov>=2.12.0
-black>=21.0.0
-flake8>=3.9.0
-
-# Documentation
-sphinx>=4.0.0
-sphinx-rtd-theme>=0.5.0
-
-# Jupyter notebooks
-jupyter>=1.0.0
-ipykernel>=6.0.0

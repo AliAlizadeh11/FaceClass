@@ -65,6 +65,14 @@ def _heuristic_predict(face_img: np.ndarray) -> str:
 
 
 def analyze_emotions(face_images: List[np.ndarray]) -> List[str]:
+    """Predict emotions for a batch of face images.
+
+    Args:
+        face_images: List of numpy arrays (BGR or RGB). Empty list returns empty.
+
+    Returns:
+        List of emotion labels corresponding to input faces.
+    """
     predictions: List[str] = []
     if not face_images:
         return predictions

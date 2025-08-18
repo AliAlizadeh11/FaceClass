@@ -16,6 +16,11 @@ from typing import Any, Dict
 
 
 def analyze_attention(face_landmarks: Any) -> Dict:
+    """Classify attentiveness from head pose angles.
+
+    Expects a mapping with numeric keys 'yaw', 'pitch', 'roll' in degrees. Returns a
+    dictionary with boolean 'is_attentive' and the angles echoed back.
+    """
     # This function assumes caller passes already-computed head pose angles if available.
     # If only sparse landmarks are passed, caller should estimate angles and include in face_landmarks.
     # Here we consume keys: 'yaw', 'pitch', 'roll'.

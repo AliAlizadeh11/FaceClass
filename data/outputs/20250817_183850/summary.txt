@@ -1,8 +1,0 @@
-FaceClass Video Processing Summary
-========================================
-
-Video: test_website_video.mp4
-Duration: 3.00 seconds
-Frames: 30
-Resolution: 640x480
-
