@@ -922,19 +922,9 @@ def process_video_frames():
                         # Emotion
                         emotion_label, emotion_conf = _analyze_emotion(face_img)
                         det['emotion'] = {'label': emotion_label, 'confidence': float(emotion_conf)}
-                        
-                        # Debug logging for emotion
-                        logger.debug(f"Student {sid}: Emotion detected: {emotion_label} (confidence: {emotion_conf:.3f})")
-                        
                         # Attention
                         attention = _analyze_attention(frame, det['bbox'])
                         det['attention'] = attention
-                        
-                        # Debug logging for attention
-                        logger.debug(f"Student {sid}: Attention - engaged: {attention.get('engaged', False)}, "
-                                   f"gaze: {attention.get('gaze_direction', 'unknown')}, "
-                                   f"pose: yaw={attention.get('head_pose', {}).get('yaw', 0):.1f}°, "
-                                   f"pitch={attention.get('head_pose', {}).get('pitch', 0):.1f}°")
 
                         # Aggregate per student
                         agg = student_aggregate.setdefault(sid, {
@@ -944,28 +934,43 @@ def process_video_frames():
                             'gaze': {}
                         })
                         agg['frames'] += 1
-                        
                         # emotion counts
                         if emotion_label:
                             agg['emotions'][emotion_label] = agg['emotions'].get(emotion_label, 0) + 1
-                        
                         # engaged
-                        is_engaged = attention.get('engaged', False)
-                        if is_engaged:
+                        if attention.get('engaged', False):
                             agg['engaged_frames'] += 1
-                        
                         # gaze dir
                         gaze_dir = attention.get('gaze_direction', 'unknown')
                         agg['gaze'][gaze_dir] = agg['gaze'].get(gaze_dir, 0) + 1
-                        
-                        # Debug logging for aggregation
-                        logger.debug(f"Student {sid} aggregation: frame {agg['frames']}, "
-                                   f"engaged_frames: {agg['engaged_frames']}, "
-                                   f"emotions: {dict(agg['emotions'])}, "
-                                   f"gaze: {dict(agg['gaze'])}")
 
-                    # Emotion and attention analysis already done above for each detection
-                    # No need for duplicate analysis - data is already populated
+                    # After assigning IDs, perform batched emotion prediction per frame
+                    frame_crops = []
+                    for d in face_detections:
+                        crop = _crop_face_region(frame, d['bbox'])
+                        frame_crops.append(crop)
+                    valid_crops = [c for c in frame_crops if c is not None]
+                    preds = analyze_emotions(valid_crops) if valid_crops else []
+                    pi = 0
+                    for idx, d in enumerate(face_detections):
+                        if frame_crops[idx] is not None:
+                            label = preds[pi] if pi < len(preds) else 'neutral'
+                            pi += 1
+                        else:
+                            label = 'neutral'
+                        d['emotion'] = {'label': label}
+
+                    # Per-frame attention estimation: light proxy based on bbox center offset
+                    for d in face_detections:
+                        x1, y1, x2, y2 = d['bbox']
+                        cx = (x1 + x2) / 2.0
+                        cy = (y1 + y2) / 2.0
+                        nx = (cx - (frame.shape[1] / 2.0)) / (frame.shape[1] / 2.0)
+                        ny = (cy - (frame.shape[0] / 2.0)) / (frame.shape[0] / 2.0)
+                        yaw = float(nx * 30.0)
+                        pitch = float(ny * 20.0)
+                        roll = 0.0
+                        d['attention'] = analyze_attention({'yaw': yaw, 'pitch': pitch, 'roll': roll})
 
                     # Convert frame to base64
                     import base64
@@ -1008,24 +1013,15 @@ def process_video_frames():
             for sid, agg in student_aggregate.items():
                 frames = max(1, agg['frames'])
                 engagement = float(agg['engaged_frames']) / float(frames)
-                
-                # Debug logging for final engagement calculation
-                logger.info(f"Student {sid} final calculation: frames={frames}, "
-                           f"engaged_frames={agg['engaged_frames']}, "
-                           f"engagement_ratio={engagement:.3f}")
-                
                 # Top emotion
                 emotions_sorted = sorted(agg['emotions'].items(), key=lambda kv: kv[1], reverse=True)
                 top_emotion = emotions_sorted[0][0] if emotions_sorted else 'neutral'
-                
                 # Normalize emotion distribution
                 emotion_stats = {
                     k: round(v / frames, 3) for k, v in agg['emotions'].items()
                 }
-                
                 # Gaze distribution
                 gaze_stats = {k: round(v / frames, 3) for k, v in agg['gaze'].items()}
-                
                 student_summaries.append({
                     'student_id': sid,
                     'frames_seen': int(frames),
@@ -1291,75 +1287,28 @@ def detect_faces_in_frame(frame):
 # ==============================
 
 def _analyze_emotion(face_img: np.ndarray) -> tuple:
-    """Enhanced emotion analysis using multiple detection methods.
-    Returns (label, confidence). Supports all 9 emotion classes.
+    """Placeholder emotion analysis using simple heuristics or external models if available.
+    Returns (label, confidence). Integrate FER2013/AffectNet here when models are present.
     """
     try:
-        # First try to use the emotion_analysis service if available
-        try:
-            from services.emotion_analysis import analyze_emotions
-            # Convert single image to list for the service
-            emotions = analyze_emotions([face_img])
-            if emotions and emotions[0] != 'neutral':
-                return emotions[0], 0.85  # High confidence for service-based detection
-        except ImportError:
-            pass
-        
-        # Enhanced heuristic-based detection with more emotion classes
+        # Simple brightness-based heuristic as a placeholder; replace with real model inference
         gray = cv2.cvtColor(face_img, cv2.COLOR_BGR2GRAY)
         mean_intensity = float(np.mean(gray))
-        std_intensity = float(np.std(gray))
-        
-        # Calculate additional features for better emotion detection
-        # Edge density (for surprise, fear)
-        edges = cv2.Canny(gray, 50, 150)
-        edge_density = np.sum(edges > 0) / (gray.shape[0] * gray.shape[1])
-        
-        # Contrast (for angry, disgust)
-        contrast = std_intensity / (mean_intensity + 1e-6)
-        
-        # Brightness zones (for happy, sad, neutral)
-        bright_pixels = np.sum(gray > 180)
-        dark_pixels = np.sum(gray < 80)
-        total_pixels = gray.shape[0] * gray.shape[1]
-        bright_ratio = bright_pixels / total_pixels
-        dark_ratio = dark_pixels / total_pixels
-        
-        # Enhanced emotion mapping with more classes
-        if edge_density > 0.15 and mean_intensity > 160:
-            return 'surprise', 0.75
-        elif edge_density > 0.12 and mean_intensity > 150:
-            return 'fear', 0.70
-        elif contrast > 0.8 and mean_intensity < 120:
-            return 'angry', 0.75
-        elif contrast > 0.7 and mean_intensity < 100:
-            return 'disgust', 0.70
-        elif bright_ratio > 0.3 and mean_intensity > 140:
-            return 'happy', 0.80
-        elif dark_ratio > 0.4 and mean_intensity < 90:
-            return 'sad', 0.75
-        elif mean_intensity > 130 and mean_intensity < 160:
-            return 'confused', 0.65
-        elif mean_intensity < 110 and std_intensity < 20:
-            return 'tired', 0.70
-        elif 100 <= mean_intensity <= 140:
-            return 'neutral', 0.75
+        # Map to pseudo-emotions for demo; real implementation would use model outputs
+        if mean_intensity > 170:
+            return 'surprise', 0.65
+        elif mean_intensity > 140:
+            return 'happy', 0.7
+        elif mean_intensity < 70:
+            return 'sad', 0.6
         else:
-            # Fallback based on intensity
-            if mean_intensity > 150:
-                return 'happy', 0.65
-            elif mean_intensity < 100:
-                return 'sad', 0.65
-            else:
-                return 'neutral', 0.60
-                
-    except Exception as e:
-        logger.warning(f"Emotion analysis failed: {e}")
+            return 'neutral', 0.55
+    except Exception:
         return 'neutral', 0.5
 
 
 def _analyze_attention(frame: np.ndarray, bbox) -> dict:
-    """Enhanced attention analysis using MediaPipe FaceMesh and improved thresholds.
+    """Estimate attention from head pose/gaze using MediaPipe FaceMesh if available.
     Returns dict: { engaged: bool, gaze_direction: str, head_pose: {yaw, pitch, roll} }
     """
     x1, y1, x2, y2 = [int(v) for v in bbox]
@@ -1374,99 +1323,37 @@ def _analyze_attention(frame: np.ndarray, bbox) -> dict:
                 rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
                 res = mesh.process(rgb)
                 if res.multi_face_landmarks:
-                    # Enhanced head pose estimation using more landmarks
+                    # Very light-weight head pose approximation from eye/nose landmarks
                     lm = res.multi_face_landmarks[0]
-                    
+                    # Use a subset of landmarks (nose tip 1, eyes 33 & 263 approx for mesh)
                     def _pt(idx):
                         p = lm.landmark[idx]
                         return np.array([p.x, p.y])
-                    
-                    # Use more landmarks for better accuracy
-                    left_eye = _pt(33)  # Left eye outer corner
-                    right_eye = _pt(263)  # Right eye outer corner
-                    nose = _pt(1)  # Nose tip
-                    left_cheek = _pt(50)  # Left cheek
-                    right_cheek = _pt(280)  # Right cheek
-                    
-                    # Calculate head pose angles
-                    # Yaw (left-right rotation)
-                    eye_center = (left_eye + right_eye) / 2.0
-                    yaw = float((right_eye[0] - left_eye[0]) * 100.0)
-                    
-                    # Pitch (up-down rotation)
-                    nose_to_eye_center = nose - eye_center
-                    pitch = float(nose_to_eye_center[1] * 100.0)
-                    
-                    # Roll (head tilt)
-                    eye_vector = right_eye - left_eye
-                    roll = float(np.arctan2(eye_vector[1], eye_vector[0]) * 180.0 / np.pi)
-                    
-                    # Enhanced gaze direction detection
+                    left_eye = _pt(33)
+                    right_eye = _pt(263)
+                    nose = _pt(1)
+                    # Horizontal gaze: compare nose x to mid-eye
                     mid_eye_x = (left_eye[0] + right_eye[0]) / 2.0
                     gaze_dir = 'center'
-                    
-                    # More sensitive gaze detection
-                    if nose[0] - mid_eye_x > 0.02:  # Increased threshold
+                    if nose[0] - mid_eye_x > 0.015:
                         gaze_dir = 'right'
-                    elif mid_eye_x - nose[0] > 0.02:
+                    elif mid_eye_x - nose[0] > 0.015:
                         gaze_dir = 'left'
-                    
-                    # Improved engagement criteria with proper thresholds
-                    # Yaw: ±25°, Pitch: ±20° (as per requirements)
-                    yaw_engaged = abs(yaw) < 25.0
-                    pitch_engaged = abs(pitch) < 20.0
-                    gaze_engaged = gaze_dir == 'center'
-                    
-                    # Student is engaged if looking center and head is within thresholds
-                    engaged = yaw_engaged and pitch_engaged and gaze_engaged
-                    
+                    # Vertical pose approx via eye-nose y
+                    pitch = float((nose[1] - (left_eye[1] + right_eye[1]) / 2.0) * 100.0)
+                    yaw = float((right_eye[0] - left_eye[0]) * 100.0)
+                    roll = 0.0
+                    engaged = gaze_dir == 'center' and abs(pitch) < 5.0
                     return {
                         'engaged': bool(engaged),
                         'gaze_direction': gaze_dir,
                         'head_pose': {'yaw': round(yaw, 2), 'pitch': round(pitch, 2), 'roll': round(roll, 2)}
                     }
-        except Exception as e:
-            logger.warning(f"MediaPipe attention analysis failed: {e}")
+        except Exception:
             pass
 
-    # Enhanced fallback attention using bbox position
-    try:
-        # Calculate attention based on face position in frame
-        frame_center_x = frame.shape[1] / 2.0
-        frame_center_y = frame.shape[0] / 2.0
-        
-        face_center_x = (x1 + x2) / 2.0
-        face_center_y = (y1 + y2) / 2.0
-        
-        # Normalize position to -1 to 1 range
-        norm_x = (face_center_x - frame_center_x) / frame_center_x
-        norm_y = (face_center_y - frame_center_y) / frame_center_y
-        
-        # Convert to angles (approximate)
-        yaw = float(norm_x * 30.0)  # ±30 degrees
-        pitch = float(norm_y * 20.0)  # ±20 degrees
-        roll = 0.0
-        
-        # Determine engagement based on position
-        engaged = abs(yaw) < 25.0 and abs(pitch) < 20.0
-        
-        # Determine gaze direction
-        if abs(norm_x) < 0.1:
-            gaze_dir = 'center'
-        elif norm_x > 0.1:
-            gaze_dir = 'right'
-        else:
-            gaze_dir = 'left'
-        
-        return {
-            'engaged': bool(engaged),
-            'gaze_direction': gaze_dir,
-            'head_pose': {'yaw': round(yaw, 2), 'pitch': round(pitch, 2), 'roll': round(roll, 2)}
-        }
-        
-    except Exception as e:
-        logger.warning(f"Fallback attention analysis failed: {e}")
-        return {'engaged': False, 'gaze_direction': 'unknown', 'head_pose': {'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0}}
+    # Fallback attention
+    return {'engaged': False, 'gaze_direction': 'unknown', 'head_pose': {'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0}}
 
 @app.route('/static/<path:filename>')
 def static_files(filename):
