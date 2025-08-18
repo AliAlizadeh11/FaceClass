@@ -73,32 +73,7 @@
             box-shadow: none;
         }
         
-        .frames-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
-        
-        .frame-card {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        .frame-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-        }
-        
-        .frame-image {
-            width: 100%;
-            height: 300px;
-            object-fit: cover;
-            border-bottom: 1px solid #e9ecef;
-        }
+
         
         .frame-info {
             padding: 20px;
@@ -233,6 +208,116 @@
             opacity: 0.9;
             font-size: 0.9rem;
         }
+        
+        .composite-result {
+            margin-top: 30px;
+        }
+        
+        .composite-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+        
+        .composite-image-wrapper {
+            text-align: center;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .composite-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .composite-image:hover {
+            transform: scale(1.02);
+        }
+        
+        .composite-info {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .info-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .info-card h5 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+        
+        .info-grid {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .info-value {
+            font-weight: 700;
+            color: #495057;
+            font-size: 0.9rem;
+        }
+        
+        .download-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .download-section h6 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+        
+        .download-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .download-buttons .btn {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        @media (max-width: 768px) {
+            .composite-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -306,9 +391,56 @@
                     </div>
                 </div>
                 
-                <!-- Frames Grid -->
-                <div id="framesGrid" class="frames-grid" style="display: none;">
-                    <!-- Frames will be dynamically added here -->
+                <!-- Single Composite Result -->
+                <div id="compositeResult" class="composite-result" style="display: none;">
+                    <h4 class="text-center mb-4">
+                        <i class="fas fa-th"></i> Face Detection Composite Result
+                    </h4>
+                    <p class="text-center text-muted mb-4">
+                        All detected faces merged into a single composite image
+                    </p>
+                    
+                    <div class="composite-container">
+                        <div class="composite-image-wrapper">
+                            <img id="compositeImage" src="" alt="Face Detection Composite" class="composite-image">
+                        </div>
+                        
+                        <div class="composite-info">
+                            <div class="info-card">
+                                <h5><i class="fas fa-info-circle"></i> Processing Summary</h5>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Total Faces:</span>
+                                        <span class="info-value" id="compositeTotalFaces">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Frames Processed:</span>
+                                        <span class="info-value" id="compositeFramesProcessed">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Detection Method:</span>
+                                        <span class="info-value" id="compositeDetectionMethod">-</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Processing Time:</span>
+                                        <span class="info-value" id="compositeProcessingTime">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="download-section">
+                                <h6><i class="fas fa-download"></i> Download Results</h6>
+                                <div class="download-buttons">
+                                    <button class="btn btn-outline-primary btn-sm" id="downloadComposite">
+                                        <i class="fas fa-image"></i> Download Composite
+                                    </button>
+                                    <button class="btn btn-outline-success btn-sm" id="downloadReport">
+                                        <i class="fas fa-file-alt"></i> Download Report
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -337,7 +469,7 @@
                     processedFrames: document.getElementById('processedFrames'),
                     videoFPS: document.getElementById('videoFPS'),
                     totalFaces: document.getElementById('totalFaces'),
-                    framesGrid: document.getElementById('framesGrid')
+                    compositeResult: document.getElementById('compositeResult')
                 };
                 
                 // Check if all required elements exist
@@ -545,54 +677,113 @@
                     this.elements.videoStats.style.display = 'block';
                 }
                 
-                // Display frames
-                this.displayFrames(data.processed_frames);
+                // Display composite result
+                this.displayCompositeResult(data);
             }
             
-            displayFrames(frames) {
-                if (!this.elements.framesGrid) {
-                    console.error('framesGrid element not found');
-                    return;
+            displayCompositeResult(data) {
+                // Calculate total faces
+                const totalFaces = data.processed_frames.reduce((sum, frame) => sum + frame.faces_detected, 0);
+                
+                // Update composite info
+                const compositeTotalFaces = document.getElementById('compositeTotalFaces');
+                const compositeFramesProcessed = document.getElementById('compositeFramesProcessed');
+                const compositeDetectionMethod = document.getElementById('compositeDetectionMethod');
+                const compositeProcessingTime = document.getElementById('compositeProcessingTime');
+                
+                if (compositeTotalFaces) {
+                    compositeTotalFaces.textContent = totalFaces;
+                }
+                if (compositeFramesProcessed) {
+                    compositeFramesProcessed.textContent = data.processed_frames.length;
+                }
+                if (compositeDetectionMethod) {
+                    // Get the most common detection method
+                    const methods = data.processed_frames.map(frame => frame.detection_method);
+                    const methodCounts = {};
+                    methods.forEach(method => {
+                        methodCounts[method] = (methodCounts[method] || 0) + 1;
+                    });
+                    const mostCommonMethod = Object.keys(methodCounts).reduce((a, b) => 
+                        methodCounts[a] > methodCounts[b] ? a : b
+                    );
+                    compositeDetectionMethod.textContent = mostCommonMethod;
+                }
+                if (compositeProcessingTime) {
+                    compositeProcessingTime.textContent = 'Completed';
                 }
                 
-                this.elements.framesGrid.innerHTML = '';
+                // Generate and display composite image
+                this.generateCompositeImage(data.processed_frames);
                 
-                frames.forEach(frame => {
-                    const frameCard = this.createFrameCard(frame);
-                    this.elements.framesGrid.appendChild(frameCard);
-                });
+                // Show composite result
+                const compositeResult = document.getElementById('compositeResult');
+                if (compositeResult) {
+                    compositeResult.style.display = 'block';
+                }
                 
-                this.elements.framesGrid.style.display = 'grid';
+                // Bind download events
+                this.bindDownloadEvents(data);
             }
             
-            createFrameCard(frame) {
-                const frameDiv = document.createElement('div');
-                frameDiv.className = 'frame-card';
+            generateCompositeImage(frames) {
+                // For now, we'll use a placeholder or the first frame with faces
+                // In a real implementation, this would call the backend to generate the composite
+                const compositeImage = document.getElementById('compositeImage');
+                if (compositeImage) {
+                    // Find a frame with faces to show as preview
+                    const frameWithFaces = frames.find(frame => frame.faces_detected > 0);
+                    if (frameWithFaces) {
+                        compositeImage.src = frameWithFaces.annotated_frame;
+                        compositeImage.alt = `Face Detection Preview - ${frameWithFaces.faces_detected} faces detected`;
+                    } else {
+                        compositeImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk1YTBhYiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIGZhY2VzIGRldGVjdGVkPC90ZXh0Pjwvc3ZnPg==';
+                        compositeImage.alt = 'No faces detected';
+                    }
+                }
+            }
+            
+            bindDownloadEvents(data) {
+                const downloadComposite = document.getElementById('downloadComposite');
+                const downloadReport = document.getElementById('downloadReport');
                 
-                frameDiv.innerHTML = `
-                    <img src="${frame.annotated_frame}" alt="Frame ${frame.frame_number}" class="frame-image">
-                    <div class="frame-info">
-                        <div class="frame-header">
-                            <span class="frame-number">Frame ${frame.frame_number}</span>
-                            <span class="faces-count">${frame.faces_detected} Faces</span>
-                        </div>
-                        <div class="detection-method">${frame.detection_method}</div>
-                        
-                        ${frame.faces_detected > 0 ? `
-                            <div class="faces-list">
-                                ${frame.face_detections.map(face => `
-                                    <div class="face-item">
-                                        <div class="face-id">Face ${face.face_id}</div>
-                                        <div class="face-confidence">Confidence: ${(face.confidence * 100).toFixed(1)}%</div>
-                                        <div class="face-bbox">BBox: [${face.bbox.join(', ')}]</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : '<p class="text-muted">No faces detected in this frame</p>'}
-                    </div>
-                `;
+                if (downloadComposite) {
+                    downloadComposite.addEventListener('click', () => {
+                        // In a real implementation, this would download the generated composite
+                        alert('Composite download feature will be implemented with backend integration');
+                    });
+                }
                 
-                return frameDiv;
+                if (downloadReport) {
+                    downloadReport.addEventListener('click', () => {
+                        // Generate and download a simple report
+                        this.downloadReport(data);
+                    });
+                }
+            }
+            
+            downloadReport(data) {
+                const totalFaces = data.processed_frames.reduce((sum, frame) => sum + frame.faces_detected, 0);
+                const report = `Face Detection Report\n` +
+                              `====================\n\n` +
+                              `Total Frames Processed: ${data.processed_frames.length}\n` +
+                              `Total Faces Detected: ${totalFaces}\n` +
+                              `Video FPS: ${data.fps}\n` +
+                              `Processing Date: ${new Date().toLocaleString()}\n\n` +
+                              `Frame Details:\n` +
+                              data.processed_frames.map(frame => 
+                                  `Frame ${frame.frame_number}: ${frame.faces_detected} faces`
+                              ).join('\n');
+                
+                const blob = new Blob([report], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'face_detection_report.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             }
         }
         

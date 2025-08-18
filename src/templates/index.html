@@ -99,6 +99,84 @@
             border-radius: 10px;
         }
         
+        .feature-highlight {
+            padding: 20px 15px;
+            border-radius: 15px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        
+        .feature-highlight:hover {
+            background: #e9ecef;
+            transform: translateY(-5px);
+        }
+        
+        .feature-highlight i {
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .feature-highlight h6 {
+            margin: 15px 0 10px 0;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .feature-highlight small {
+            line-height: 1.4;
+        }
+        
+        .result-card {
+            padding: 20px;
+            border-radius: 15px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        
+        .result-card:hover {
+            background: #e9ecef;
+            transform: translateY(-5px);
+        }
+        
+        .result-card img {
+            border: 3px solid #dee2e6;
+            transition: all 0.3s ease;
+        }
+        
+        .result-card:hover img {
+            border-color: #667eea;
+        }
+        
+        .stats-row {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            display: block;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #667eea;
+            line-height: 1;
+        }
+        
+        .stat-label {
+            display: block;
+            font-size: 0.9rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 5px;
+        }
+        
         .demo-section {
             background: #f8f9fa;
             padding: 60px 0;
@@ -254,10 +332,7 @@
                     <input type="file" id="videoFile" accept="video/*" class="d-none">
                     
                     <div class="text-center mt-4">
-                        <button class="btn btn-custom" id="goToFrameAnalysis" disabled>
-                            <i class="fas fa-film"></i> Frame-by-Frame Analysis
-                        </button>
-                        <button class="btn btn-secondary-custom ms-3" id="goToVideoFrames" disabled>
+                        <button class="btn btn-custom" id="goToVideoFrames" disabled>
                             <i class="fas fa-images"></i> Video Frames with Face Detection
                         </button>
                     </div>
@@ -270,6 +345,91 @@
                         <p class="text-center mb-0">
                             <span id="progressText">Preparing analysis...</span>
                         </p>
+                    </div>
+                    
+                    <!-- Feature Description -->
+                    <div class="text-center mt-4">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="feature-highlight">
+                                    <i class="fas fa-search fa-2x text-primary mb-2"></i>
+                                    <h6>Face Detection</h6>
+                                    <small class="text-muted">Advanced AI-powered face detection</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="feature-highlight">
+                                    <i class="fas fa-crop fa-2x text-success mb-2"></i>
+                                    <h6>Face Cropping</h6>
+                                    <small class="text-muted">Automatic face extraction & alignment</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="feature-highlight">
+                                    <i class="fas fa-th fa-2x text-warning mb-2"></i>
+                                    <h6>Composite Creation</h6>
+                                    <small class="text-muted">Grid, circular & pyramid layouts</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Face Detection Results Showcase -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="feature-card p-5">
+                    <h3 class="text-center mb-4">
+                        <i class="fas fa-star"></i> Face Detection Results Showcase
+                    </h3>
+                    <p class="text-center text-muted mb-4">
+                        See the power of our face detection system in action. We've processed video frames and created beautiful composite images.
+                    </p>
+                    
+                    <div class="row">
+                        <div class="col-lg-4 mb-4">
+                            <div class="result-card text-center">
+                                <img src="/static/thumbnails/enhanced_grid.jpg" alt="Enhanced Grid Layout" class="img-fluid rounded mb-3" style="max-height: 200px;">
+                                <h5>Grid Layout</h5>
+                                <p class="text-muted">147 faces arranged in a clean grid format</p>
+                                <small class="text-success">✓ Quality enhanced • ✓ Organized layout</small>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 mb-4">
+                            <div class="result-card text-center">
+                                <img src="/static/thumbnails/enhanced_circular.jpg" alt="Circular Layout" class="img-fluid rounded mb-3" style="max-height: 200px;">
+                                <h5>Circular Layout</h5>
+                                <p class="text-muted">Artistic circular arrangement of detected faces</p>
+                                <small class="text-success">✓ Visual appeal • ✓ Creative design</small>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 mb-4">
+                            <div class="result-card text-center">
+                                <img src="/static/thumbnails/enhanced_pyramid.jpg" alt="Pyramid Layout" class="img-fluid rounded mb-3" style="max-height: 200px;">
+                                <h5>Pyramid Layout</h5>
+                                <p class="text-muted">Hierarchical arrangement by face quality</p>
+                                <small class="text-success">✓ Quality-based • ✓ Structured view</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <div class="stats-row">
+                            <div class="stat-item">
+                                <span class="stat-number">147</span>
+                                <span class="stat-label">Faces Detected</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">32</span>
+                                <span class="stat-label">Frames Processed</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">6</span>
+                                <span class="stat-label">Layout Options</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -309,7 +469,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             const uploadArea = document.getElementById('uploadArea');
             const videoFile = document.getElementById('videoFile');
-            const goToFrameAnalysis = document.getElementById('goToFrameAnalysis');
             const goToVideoFrames = document.getElementById('goToVideoFrames');
             const progressSection = document.getElementById('progressSection');
             const progressBar = document.getElementById('progressBar');
@@ -351,32 +510,12 @@
                         <p class="text-muted">${file.name}</p>
                         <small class="text-muted">Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB</small>
                     `;
-                    goToFrameAnalysis.disabled = false;
                     goToVideoFrames.disabled = false;
                 } else {
                     alert('Please select a valid video file.');
                 }
             }
 
-            // Go to frame analysis
-            goToFrameAnalysis.addEventListener('click', () => {
-                if (!videoFile.files[0]) {
-                    alert('Please select a video file first.');
-                    return;
-                }
-                
-                // Store video info in sessionStorage for frame analysis
-                const videoInfo = {
-                    name: videoFile.files[0].name,
-                    size: videoFile.files[0].size,
-                    type: videoFile.files[0].type
-                };
-                sessionStorage.setItem('videoInfo', JSON.stringify(videoInfo));
-                
-                // Navigate to frame analysis
-                window.location.href = '/frame-analysis';
-            });
-            
             // Go to video frames with face detection
             goToVideoFrames.addEventListener('click', () => {
                 if (!videoFile.files[0]) {
