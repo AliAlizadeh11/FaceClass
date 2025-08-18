@@ -665,10 +665,21 @@
                     this.elements.videoFPS.textContent = data.fps.toFixed(1);
                 }
                 
-                // Calculate total faces
-                const totalFaces = data.processed_frames.reduce((sum, frame) => sum + frame.faces_detected, 0);
+                // Calculate unique student IDs across all frames
+                const uniqueIds = new Set();
+                if (Array.isArray(data.processed_frames)) {
+                    for (const frame of data.processed_frames) {
+                        if (Array.isArray(frame.face_detections)) {
+                            for (const det of frame.face_detections) {
+                                if (det && typeof det.student_id === 'string' && det.student_id) {
+                                    uniqueIds.add(det.student_id);
+                                }
+                            }
+                        }
+                    }
+                }
                 if (this.elements.totalFaces) {
-                    this.elements.totalFaces.textContent = totalFaces;
+                    this.elements.totalFaces.textContent = uniqueIds.size;
                 }
                 
                 if (this.elements.videoStats) {

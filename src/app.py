@@ -788,6 +788,79 @@ def process_video_frames():
             # Extract key frames (every 10th frame for performance)
             frame_interval = max(1, total_frames // 20)  # Get ~20 frames
             processed_frames = []
+
+            # Session-level unique ID assignment using simple embeddings (in-memory)
+            session_entities = []  # list of dicts: { 'id': str, 'embedding': np.ndarray, 'count': int }
+            next_entity_idx = 1
+
+            def _cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
+                if a is None or b is None:
+                    return 0.0
+                na = float(np.linalg.norm(a))
+                nb = float(np.linalg.norm(b))
+                if na == 0.0 or nb == 0.0:
+                    return 0.0
+                return float(np.dot(a, b) / (na * nb))
+
+            def _crop_face_region(img: np.ndarray, bbox):
+                try:
+                    x1, y1, x2, y2 = [int(v) for v in bbox]
+                    h, w = img.shape[:2]
+                    pad_x = int(max(0, x2 - x1) * 0.15)
+                    pad_y = int(max(0, y2 - y1) * 0.15)
+                    xx1 = max(0, x1 - pad_x)
+                    yy1 = max(0, y1 - pad_y)
+                    xx2 = min(w, x2 + pad_x)
+                    yy2 = min(h, y2 + pad_y)
+                    if xx2 <= xx1 or yy2 <= yy1:
+                        return None
+                    face = img[yy1:yy2, xx1:xx2]
+                    if face is None or face.size == 0:
+                        return None
+                    face = cv2.resize(face, (128, 128))
+                    return face
+                except Exception:
+                    return None
+
+            def _extract_simple_embedding(face_image: np.ndarray) -> np.ndarray:
+                # Grayscale + histogram normalization as lightweight embedding
+                try:
+                    gray = cv2.cvtColor(face_image, cv2.COLOR_BGR2GRAY)
+                except Exception:
+                    gray = face_image
+                gray = cv2.resize(gray, (128, 128))
+                hist = cv2.calcHist([gray], [0], None, [128], [0, 256]).flatten()
+                s = hist.sum()
+                if s > 0:
+                    hist = hist / s
+                return hist.astype(np.float32)
+
+            def _assign_entity_id(face_img: np.ndarray) -> str:
+                nonlocal next_entity_idx, session_entities
+                embedding = _extract_simple_embedding(face_img)
+                # Match to existing
+                best_id = None
+                best_sim = 0.0
+                for ent in session_entities:
+                    sim = _cosine_similarity(embedding, ent['embedding'])
+                    if sim > best_sim:
+                        best_sim = sim
+                        best_id = ent['id']
+                # Threshold for considering same person (tuneable)
+                SIM_THRESHOLD = 0.80
+                if best_id is not None and best_sim >= SIM_THRESHOLD:
+                    # Update rolling template
+                    for ent in session_entities:
+                        if ent['id'] == best_id:
+                            ent['embedding'] = (ent['embedding'] * ent['count'] + embedding) / (ent['count'] + 1.0)
+                            ent['count'] += 1
+                            break
+                    return best_id
+                # New identity
+                new_id = f"ID_{next_entity_idx:03d}"
+                next_entity_idx += 1
+                session_entities.append({'id': new_id, 'embedding': embedding, 'count': 1})
+                return new_id
             
             logger.info(f"Processing video: {total_frames} frames, {fps} FPS, {duration:.2f}s duration")
             
@@ -808,6 +881,19 @@ def process_video_frames():
                     # Detect faces in this frame
                     annotated_frame, face_detections, detection_method = detect_faces_in_frame(frame)
                     
+                    # Assign unique student IDs and draw IDs on the annotated frame
+                    for det in face_detections:
+                        face_img = _crop_face_region(frame, det['bbox'])
+                        sid = None
+                        if face_img is not None:
+                            sid = _assign_entity_id(face_img)
+                        if not sid:
+                            sid = "ID_UNK"
+                        det['student_id'] = sid
+                        # Draw ID label
+                        x1, y1, x2, y2 = det['bbox']
+                        cv2.putText(annotated_frame, sid, (x1, max(0, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
                     # Convert frame to base64
                     import base64
                     _, buffer = cv2.imencode('.jpg', annotated_frame)
@@ -820,7 +906,8 @@ def process_video_frames():
                             'face_id': int(face['face_id']),
                             'bbox': [int(x) for x in face['bbox']],
                             'confidence': float(face['confidence']),
-                            'method': str(face['method'])
+                            'method': str(face['method']),
+                            'student_id': str(face.get('student_id', ''))
                         }
                         serializable_detections.append(serializable_face)
                     
