@@ -209,6 +209,16 @@
         .annotation-green { background: #d4edda; color: #155724; border: 2px solid #28a745; }
         .annotation-yellow { background: #fff3cd; color: #856404; border: 2px solid #ffc107; }
         .annotation-red { background: #f8d7da; color: #721c24; border: 2px solid #dc3545; }
+        
+        /* Harmonize Team 2 and Team 3 sections */
+        #team2Card, #team3Card { min-height: 0; }
+        @media (min-width: 992px) {
+            #team2Card, #team3Card { padding: 40px; }
+            #team2-analysis .upload-area, #team3-analysis .upload-area { padding: 50px 20px; }
+        }
+        #team3Results .row > [class^="col-"] { margin-bottom: 0.75rem; }
+        #team3Results img { max-height: 260px; object-fit: contain; }
+        #team3AttendanceTable { font-size: 0.95rem; }
     </style>
 </head>
 <body>
@@ -225,12 +235,12 @@
                         <a href="#upload" class="btn btn-custom btn-lg">
                             <i class="fas fa-upload"></i> Start Analysis
                         </a>
-                        <a href="/team1-dashboard" class="btn btn-secondary-custom btn-lg">
+                        <!-- <a href="/team1-dashboard" class="btn btn-secondary-custom btn-lg">
                             <i class="fas fa-cogs"></i> Team 1 Dashboard
                         </a>
                         <a href="/video-analysis" class="btn btn-outline-light btn-lg">
                             <i class="fas fa-chart-line"></i> View Demo Results
-                        </a>
+                        </a> -->
                     </div>
                 </div>
                 <div class="col-lg-4 text-center">
@@ -240,9 +250,9 @@
         </div>
     </div>
 
-    <div class="container">
+    <!-- <div class="container"> -->
         <!-- Features Section -->
-        <div class="row mb-5">
+        <!-- <div class="row mb-5">
             <div class="col-12 text-center mb-5">
                 <h2 class="display-5 fw-bold">Advanced Video Analysis Features</h2>
                 <p class="lead text-muted">Professional-grade classroom monitoring with cutting-edge computer vision and Team 1 enhancements</p>
@@ -287,10 +297,10 @@
                     <p class="text-muted">Intelligent face quality evaluation for resolution, lighting, pose, and expression analysis.</p>
                 </div>
             </div>
-        </div>
+        </div> -->
 
         <!-- Annotation Preview -->
-        <div class="row mb-5">
+        <!-- <div class="row mb-5">
             <div class="col-12">
                 <div class="annotation-preview">
                     <h4 class="text-center mb-4">
@@ -312,7 +322,7 @@
                     </p>
                 </div>
             </div>
-        </div>
+        </div> -->
 
         <!-- Upload Section -->
         <div class="row" id="upload">
@@ -348,7 +358,7 @@
                     </div>
                     
                     <!-- Feature Description -->
-                    <div class="text-center mt-4">
+                    <!-- <div class="text-center mt-4">
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="feature-highlight">
@@ -372,13 +382,13 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> -->
                 </div>
             </div>
         </div>
 
         <!-- Face Detection Results Showcase -->
-        <div class="row mb-5">
+        <!-- <div class="row mb-5">
             <div class="col-12">
                 <div class="feature-card p-5">
                     <h3 class="text-center mb-4">
@@ -433,12 +443,12 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> -->
 
         <!-- Team 2: Upload Video & Emotion/Attention Analysis -->
         <div class="row mt-5" id="team2-analysis">
             <div class="col-lg-8 mx-auto">
-                <div class="feature-card p-5">
+                <div class="feature-card p-5" id="team2Card">
                     <h3 class="text-center mb-4">
                         <i class="fas fa-brain"></i> Upload Video & Emotion/Attention Analysis
                     </h3>
@@ -482,10 +492,10 @@
 
         <!-- Team 3: Attendance & Spatial Analysis -->
         <div class="row mt-5" id="team3-analysis">
-            <div class="col-lg-10 mx-auto">
-                <div class="feature-card p-5">
+            <div class="col-lg-8 mx-auto">
+                <div class="feature-card p-5" id="team3Card">
                     <h3 class="text-center mb-4">
-                        <i class="fas fa-users"></i> Attendance & Spatial Analysis (Team 3)
+                        <i class="fas fa-users"></i> Attendance & Spatial Analysis
                     </h3>
 
                     <div class="upload-area" id="uploadAreaTeam3">
@@ -577,7 +587,7 @@
         </div>
 
         <!-- Demo Section -->
-        <div class="demo-section">
+        <!-- <div class="demo-section">
             <div class="container">
                 <div class="row align-items-center">
                     <div class="col-lg-6">
@@ -603,7 +613,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
