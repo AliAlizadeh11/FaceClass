@@ -117,6 +117,48 @@ def video_frames():
     """Video frames with face detection display interface."""
     return render_template('video_frames_display.html')
 
+@app.route('/api/upload-status')
+def upload_status():
+    """Return whether a video has been uploaded in this browser session."""
+    uploaded_path = session.get('uploaded_video')
+    if uploaded_path and Path(uploaded_path).exists():
+        return jsonify({
+            'available': True,
+            'filename': Path(uploaded_path).name,
+            'path': uploaded_path
+        })
+    return jsonify({'available': False})
+
+@app.route('/api/upload-video', methods=['POST'])
+def api_upload_video():
+    """Upload a video once and store its path for reuse across steps."""
+    try:
+        if 'video' not in request.files:
+            return jsonify({'error': 'No video file provided'}), 400
+        video_file = request.files['video']
+        if video_file.filename == '':
+            return jsonify({'error': 'No video file selected'}), 400
+
+        # Save uploaded video to static/processed_videos
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = secure_filename(video_file.filename)
+        name, ext = os.path.splitext(filename)
+        saved_path = Path('static/processed_videos') / f"{name}_{timestamp}{ext}"
+        saved_path.parent.mkdir(parents=True, exist_ok=True)
+        video_file.save(str(saved_path))
+
+        # Store in session for reuse
+        session['uploaded_video'] = str(saved_path)
+
+        return jsonify({
+            'success': True,
+            'filename': saved_path.name,
+            'path': str(saved_path)
+        })
+    except Exception as e:
+        logger.error(f"Upload failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/team1-dashboard')
 def team1_dashboard():
     """Team 1 Dashboard - Model comparison, tracking, quality assessment."""
@@ -773,22 +815,27 @@ def analyze_frame():
 
 @app.route('/api/process-video-frames', methods=['POST'])
 def process_video_frames():
-    """Process video and extract frames with face detection for website display."""
+    """Process video and extract frames with face detection for website display.
+
+    If a video has already been uploaded in this session (via /api/upload-video),
+    use that stored path. Otherwise accept a fresh upload in the request.
+    """
     try:
-        # Check if video file is uploaded
-        if 'video' not in request.files:
-            return jsonify({'error': 'No video file provided'}), 400
-        
-        video_file = request.files['video']
-        
-        if video_file.filename == '':
-            return jsonify({'error': 'No video file selected'}), 400
-        
-        # Create a temporary video file
-        import tempfile
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_video:
-            video_file.save(temp_video.name)
-            temp_video_path = temp_video.name
+        temp_video_path = None
+        uploaded_path = session.get('uploaded_video')
+        if uploaded_path and Path(uploaded_path).exists():
+            temp_video_path = uploaded_path
+        else:
+            # Fall back to request upload for backward compatibility
+            if 'video' not in request.files:
+                return jsonify({'error': 'No video file provided'}), 400
+            video_file = request.files['video']
+            if video_file.filename == '':
+                return jsonify({'error': 'No video file selected'}), 400
+            import tempfile
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_video:
+                video_file.save(temp_video.name)
+                temp_video_path = temp_video.name
         
         try:
             # Get video information
@@ -1003,8 +1050,9 @@ def process_video_frames():
             
             cap.release()
             
-            # Clean up temp video file
-            os.unlink(temp_video_path)
+            # Clean up temp file only if it was a temporary upload (not session video)
+            if session.get('uploaded_video') != temp_video_path and os.path.exists(temp_video_path):
+                os.unlink(temp_video_path)
             
             logger.info(f"Video processing completed: {len(processed_frames)} frames processed")
 

@@ -355,6 +355,7 @@
                         <p class="text-center mb-0">
                             <span id="progressText">Preparing analysis...</span>
                         </p>
+                        <p class="text-center mt-2"><small id="uploadStatus" class="text-success" style="display:none"><i class="fas fa-check-circle"></i> Video uploaded and available for later steps</small></p>
                     </div>
                     
                     <!-- Feature Description -->
@@ -653,28 +654,44 @@
                 }
             });
 
-            function handleFile(file) {
-                if (file.type.startsWith('video/')) {
+            async function handleFile(file) {
+                if (!file.type.startsWith('video/')) { alert('Please select a valid video file.'); return; }
+                // Update UI
+                uploadArea.innerHTML = `
+                    <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                    <h5>Uploading...</h5>
+                    <p class="text-muted">${file.name}</p>
+                `;
+                progressSection.style.display = 'block';
+                progressBar.style.width = '15%';
+                progressText.textContent = 'Uploading video...';
+
+                // Upload once and persist on server
+                const formData = new FormData();
+                formData.append('video', file);
+                try {
+                    const resp = await fetch('/api/upload-video', { method: 'POST', body: formData });
+                    const data = await resp.json();
+                    if (!data.success) throw new Error(data.error || 'Upload failed');
+                    progressBar.style.width = '100%';
+                    progressText.textContent = 'Upload complete';
+                    const statusEl = document.getElementById('uploadStatus');
+                    if (statusEl) { statusEl.style.display = 'inline'; }
                     uploadArea.innerHTML = `
                         <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                        <h5>Video Selected!</h5>
-                        <p class="text-muted">${file.name}</p>
-                        <small class="text-muted">Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB</small>
+                        <h5>Video Uploaded!</h5>
+                        <p class="text-muted">${data.filename}</p>
                     `;
                     goToVideoFrames.disabled = false;
-                } else {
-                    alert('Please select a valid video file.');
+                } catch (e) {
+                    progressSection.style.display = 'none';
+                    alert('Upload failed. Please try again.');
                 }
             }
 
             // Go to video frames with face detection
             goToVideoFrames.addEventListener('click', () => {
-                if (!videoFile.files[0]) {
-                    alert('Please select a video file first.');
-                    return;
-                }
-                
-                // Navigate to video frames display
+                // Navigate to video frames display (video already uploaded)
                 window.location.href = '/video-frames';
             });
 

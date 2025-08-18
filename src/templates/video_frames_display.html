@@ -357,19 +357,20 @@
                 </h2>
                 
                 <div class="upload-section">
-                    <div class="upload-area" id="uploadArea">
-                        <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
-                        <h5>Upload Video for Face Detection</h5>
-                        <p class="text-muted">Drag and drop your video file here</p>
-                        <p class="text-muted">or click to browse files</p>
-                        <small class="text-muted">Supports MP4, AVI, MOV formats up to 500MB</small>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1"><i class="fas fa-cloud"></i> Uploaded Video</h5>
+                            <small id="uploadedFilename" class="text-muted">Checking upload status...</small>
+                        </div>
+                        <div>
+                            <span id="uploadBadge" class="badge bg-secondary">Not available</span>
+                        </div>
                     </div>
-                    
-                    <input type="file" id="videoFile" accept="video/*" class="d-none">
-                    
-                    <button class="btn btn-custom" id="processVideo" disabled>
-                        <i class="fas fa-search"></i> Process Video & Detect Faces
-                    </button>
+                    <div class="mt-3">
+                        <button class="btn btn-custom" id="processVideo" disabled>
+                            <i class="fas fa-search"></i> Process Video & Detect Faces
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Processing Status -->
@@ -448,15 +449,14 @@
     <script>
         class VideoFrameProcessor {
             constructor() {
-                this.videoFile = null;
+                this.sessionVideoPath = null;
                 this.initializeElements();
                 this.bindEvents();
+                this.checkUploadStatus();
             }
             
             initializeElements() {
                 this.elements = {
-                    uploadArea: document.getElementById('uploadArea'),
-                    videoFile: document.getElementById('videoFile'),
                     processVideo: document.getElementById('processVideo'),
                     processingStatus: document.getElementById('processingStatus'),
                     processingText: document.getElementById('processingText'),
@@ -467,7 +467,9 @@
                     processedFrames: document.getElementById('processedFrames'),
                     videoFPS: document.getElementById('videoFPS'),
                     totalFaces: document.getElementById('totalFaces'),
-                    compositeResult: document.getElementById('compositeResult')
+                    compositeResult: document.getElementById('compositeResult'),
+                    uploadedFilename: document.getElementById('uploadedFilename'),
+                    uploadBadge: document.getElementById('uploadBadge')
                 };
                 
                 // Check if all required elements exist
@@ -485,66 +487,34 @@
             }
             
             bindEvents() {
-                // Drag and drop functionality
-                if (this.elements.uploadArea) {
-                    this.elements.uploadArea.addEventListener('click', () => this.elements.videoFile.click());
-                    
-                    this.elements.uploadArea.addEventListener('dragover', (e) => {
-                        e.preventDefault();
-                        this.elements.uploadArea.classList.add('dragover');
-                    });
-                    
-                    this.elements.uploadArea.addEventListener('dragleave', () => {
-                        this.elements.uploadArea.classList.remove('dragover');
-                    });
-                    
-                    this.elements.uploadArea.addEventListener('drop', (e) => {
-                        e.preventDefault();
-                        this.elements.uploadArea.classList.remove('dragover');
-                        const files = e.dataTransfer.files;
-                        if (files.length > 0) {
-                            this.handleFile(files[0]);
-                        }
-                    });
-                }
-                
-                // File input change
-                if (this.elements.videoFile) {
-                    this.elements.videoFile.addEventListener('change', (e) => {
-                        if (e.target.files.length > 0) {
-                            this.handleFile(e.target.files[0]);
-                        }
-                    });
-                }
-                
                 // Process video button
                 if (this.elements.processVideo) {
                     this.elements.processVideo.addEventListener('click', () => this.processVideo());
                 }
             }
             
-            handleFile(file) {
-                if (file.type.startsWith('video/')) {
-                    this.videoFile = file;
-                    if (this.elements.uploadArea) {
-                        this.elements.uploadArea.innerHTML = `
-                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                            <h5>Video Selected!</h5>
-                            <p class="text-muted">${file.name}</p>
-                            <small class="text-muted">Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB</small>
-                        `;
+            async checkUploadStatus() {
+                try {
+                    const resp = await fetch('/api/upload-status');
+                    const data = await resp.json();
+                    if (data.available) {
+                        this.sessionVideoPath = data.path;
+                        if (this.elements.uploadedFilename) this.elements.uploadedFilename.textContent = data.filename;
+                        if (this.elements.uploadBadge) { this.elements.uploadBadge.className = 'badge bg-success'; this.elements.uploadBadge.textContent = 'Available'; }
+                        if (this.elements.processVideo) this.elements.processVideo.disabled = false;
+                    } else {
+                        if (this.elements.uploadedFilename) this.elements.uploadedFilename.textContent = 'No video uploaded. Please go back and upload a video.';
+                        if (this.elements.uploadBadge) { this.elements.uploadBadge.className = 'badge bg-secondary'; this.elements.uploadBadge.textContent = 'Not available'; }
+                        if (this.elements.processVideo) this.elements.processVideo.disabled = true;
                     }
-                    if (this.elements.processVideo) {
-                        this.elements.processVideo.disabled = false;
-                    }
-                } else {
-                    alert('Please select a valid video file.');
+                } catch (e) {
+                    if (this.elements.uploadedFilename) this.elements.uploadedFilename.textContent = 'Status check failed.';
                 }
             }
             
             async processVideo() {
-                if (!this.videoFile) {
-                    alert('Please select a video file first.');
+                if (!this.sessionVideoPath) {
+                    alert('No uploaded video found. Please go back and upload a video.');
                     return;
                 }
                 
@@ -566,10 +536,7 @@
                 }
                 
                 try {
-                    // Create FormData
-                    const formData = new FormData();
-                    formData.append('video', this.videoFile);
-                    
+                    // Call processing using stored uploaded video (server will reuse session video)
                     // Update progress safely
                     if (this.elements.processingText) {
                         this.elements.processingText.textContent = 'Uploading video...';
@@ -581,11 +548,8 @@
                         this.elements.processingDetails.innerHTML = '<small class="text-muted">Uploading video file...</small>';
                     }
                     
-                    // Process video
-                    const response = await fetch('/api/process-video-frames', {
-                        method: 'POST',
-                        body: formData
-                    });
+                    // Process video (no re-upload needed)
+                    const response = await fetch('/api/process-video-frames', { method: 'POST' });
                     
                     if (this.elements.processingProgress) {
                         this.elements.processingProgress.style.width = '60%';
