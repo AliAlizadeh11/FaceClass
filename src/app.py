@@ -46,6 +46,19 @@ except ImportError:
 if MEDIAPIPE_AVAILABLE:
     mp_face_detection = mp.solutions.face_detection
     mp_drawing = mp.solutions.drawing_utils
+    logger.info("✅ MediaPipe FaceDetection ready")
+
+# Optional: MTCNN (for stronger small/blurred face detection)
+try:
+    from mtcnn.mtcnn import MTCNN  # type: ignore
+    MTCNN_AVAILABLE = True
+    # Lazy-init detector to avoid TF/Keras overhead on import-only
+    _mtcnn_detector = None
+    logger.info("✅ MTCNN available for face detection")
+except Exception:
+    MTCNN_AVAILABLE = False
+    _mtcnn_detector = None
+    logger.info("ℹ️ MTCNN not available; will skip MTCNN detection")
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -847,176 +860,204 @@ def process_video_frames():
         logger.error(f"Video processing error: {e}")
         return jsonify({'error': str(e)}), 500
 
+def _apply_preprocessing_for_detection(frame: np.ndarray) -> np.ndarray:
+    """Enhance frame for small/blurred faces: denoise + CLAHE (Y channel)."""
+    try:
+        # Denoise (gentle)
+        denoised = cv2.fastNlMeansDenoisingColored(frame, None, 3, 3, 7, 21)
+        # Convert to YCrCb and apply CLAHE on Y
+        ycrcb = cv2.cvtColor(denoised, cv2.COLOR_BGR2YCrCb)
+        y, cr, cb = cv2.split(ycrcb)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        y_eq = clahe.apply(y)
+        ycrcb_eq = cv2.merge([y_eq, cr, cb])
+        enhanced = cv2.cvtColor(ycrcb_eq, cv2.COLOR_YCrCb2BGR)
+        return enhanced
+    except Exception:
+        return frame
+
+
+def _generate_scaled_versions(frame: np.ndarray, scales=(1.0, 1.25, 1.5, 2.0)):
+    """Yield (scaled_frame, scale) for multiple upscales to detect small faces."""
+    h, w = frame.shape[:2]
+    for s in scales:
+        if s == 1.0:
+            yield frame, 1.0
+        else:
+            scaled = cv2.resize(frame, (int(w * s), int(h * s)), interpolation=cv2.INTER_CUBIC)
+            yield scaled, s
+
+
+def _iou(a, b) -> float:
+    ax1, ay1, ax2, ay2 = a
+    bx1, by1, bx2, by2 = b
+    inter_x1, inter_y1 = max(ax1, bx1), max(ay1, by1)
+    inter_x2, inter_y2 = min(ax2, bx2), min(ay2, by2)
+    inter_w, inter_h = max(0, inter_x2 - inter_x1), max(0, inter_y2 - inter_y1)
+    inter_area = inter_w * inter_h
+    a_area = max(0, ax2 - ax1) * max(0, ay2 - ay1)
+    b_area = max(0, bx2 - bx1) * max(0, by2 - by1)
+    union = a_area + b_area - inter_area
+    return inter_area / union if union > 0 else 0.0
+
+
+def _nms_merge(dets, iou_threshold=0.4):
+    """Non-maximum suppression/merging across methods and scales."""
+    if not dets:
+        return []
+    # Sort by confidence descending
+    dets_sorted = sorted(dets, key=lambda d: float(d.get('confidence', 0.0)), reverse=True)
+    kept = []
+    for d in dets_sorted:
+        keep = True
+        for k in kept:
+            if _iou(d['bbox'], k['bbox']) > iou_threshold:
+                keep = False
+                break
+        if keep:
+            kept.append(d)
+    return kept
+
+
 def detect_faces_in_frame(frame):
-    """Detect faces in a frame using multiple methods for maximum coverage."""
+    """Detect faces in a frame with robust preprocessing, multi-scale, and multiple models."""
+    original_h, original_w = frame.shape[:2]
+    enhanced = _apply_preprocessing_for_detection(frame)
+
     all_faces = []
     detection_methods_used = []
-    
-    # Method 1: OpenCV DNN (most reliable)
-    try:
-        # Load pre-trained face detection model
-        model_path = "models/face_detection/opencv_face_detector_uint8.pb"
-        config_path = "models/face_detection/opencv_face_detector.pbtxt"
-        
-        if os.path.exists(model_path) and os.path.exists(config_path):
-            net = cv2.dnn.readNet(model_path, config_path)
-            
-            # Prepare input blob
-            blob = cv2.dnn.blobFromImage(frame, 1.0, (300, 300), [104, 117, 123], False, False)
-            net.setInput(blob)
-            detections = net.forward()
-            
-            for i in range(detections.shape[2]):
-                confidence = detections[0, 0, i, 2]
-                
-                # Lower confidence threshold to catch more faces
-                if confidence > 0.3:  # Reduced from 0.5 to 0.3
-                    # Get bounding box coordinates
-                    x1 = int(detections[0, 0, i, 3] * frame.shape[1])
-                    y1 = int(detections[0, 0, i, 4] * frame.shape[0])
-                    x2 = int(detections[0, 0, i, 5] * frame.shape[1])
-                    y2 = int(detections[0, 0, i, 6] * frame.shape[0])
-                    
-                    all_faces.append({
-                        'bbox': [int(x1), int(y1), int(x2), int(y2)],  # Convert to int
-                        'confidence': float(confidence),  # Convert to float
-                        'method': 'OpenCV DNN'
-                    })
-                    detection_methods_used.append('OpenCV DNN')
-            
-        else:
-            # If model files don't exist, use Haar cascade as fallback
-            raise FileNotFoundError("DNN model files not found")
-            
-    except Exception as e:
-        logger.error(f"OpenCV DNN detection error: {e}")
-        # Continue to other methods
-        pass
-    
-    # Method 2: Haar Cascade with multiple scales (more sensitive)
-    try:
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        
-        # Use fewer scale factors for faster processing
-        scale_factors = [1.1, 1.2]  # Reduced from 5 to 2
-        min_neighbors_options = [4]  # Reduced from 3 to 1
-        
-        for scale_factor in scale_factors:
-            for min_neighbors in min_neighbors_options:
-                faces = face_cascade.detectMultiScale(gray, scale_factor, min_neighbors, minSize=(20, 20))
-                
-                for (x, y, w, h) in faces:
-                    # Check if this face overlaps significantly with already detected faces
-                    is_duplicate = False
-                    for existing_face in all_faces:
-                        existing_bbox = existing_face['bbox']
-                        # Calculate overlap
-                        overlap_x = max(0, min(x + w, existing_bbox[2]) - max(x, existing_bbox[0]))
-                        overlap_y = max(0, min(y + h, existing_bbox[3]) - max(y, existing_bbox[1]))
-                        overlap_area = overlap_x * overlap_y
-                        face_area = w * h
-                        
-                        if overlap_area > face_area * 0.5:  # 50% overlap threshold
-                            is_duplicate = True
-                            break
-                    
-                    if not is_duplicate:
-                        all_faces.append({
-                            'bbox': [int(x), int(y), int(x + w), int(y + h)],  # Convert to int
-                            'confidence': 0.8,  # Default confidence for Haar
-                            'method': 'Haar Cascade'
-                        })
-                        detection_methods_used.append('Haar Cascade')
-                        
-    except Exception as e:
-        logger.error(f"Haar cascade detection error: {e}")
-        pass
-    
-    # Method 3: MediaPipe (if available)
-    if MEDIAPIPE_AVAILABLE:
+
+    # Preload OpenCV DNN if available
+    net = None
+    model_path = "models/face_detection/opencv_face_detector_uint8.pb"
+    config_path = "models/face_detection/opencv_face_detector.pbtxt"
+    if os.path.exists(model_path) and os.path.exists(config_path):
         try:
-            with mp_face_detection.FaceDetection(
-                model_selection=1, min_detection_confidence=0.3  # Lower threshold
-            ) as face_detection:
-                
-                # Convert BGR to RGB
-                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                results = face_detection.process(rgb_frame)
-                
-                if results.detections:
-                    for detection in results.detections:
-                        bboxC = detection.location_data.relative_bounding_box
-                        ih, iw, _ = frame.shape
-                        
-                        # Convert relative coordinates to absolute
-                        x1 = int(bboxC.xmin * iw)
-                        y1 = int(bboxC.ymin * ih)
-                        x2 = int((bboxC.xmin + bboxC.width) * iw)
-                        y2 = int((bboxC.ymin + bboxC.height) * ih)
-                        
-                        # Ensure coordinates are within frame bounds
-                        x1 = max(0, x1)
-                        y1 = max(0, y1)
-                        x2 = min(iw, x2)
-                        y2 = min(ih, y2)
-                        
-                        # Check for duplicates
-                        is_duplicate = False
-                        for existing_face in all_faces:
-                            existing_bbox = existing_face['bbox']
-                            overlap_x = max(0, min(x2, existing_bbox[2]) - max(x1, existing_bbox[0]))
-                            overlap_y = max(0, min(y2, existing_bbox[3]) - max(y1, existing_bbox[1]))
-                            overlap_area = overlap_x * overlap_y
-                            face_area = (x2 - x1) * (y2 - y1)
-                            
-                            if overlap_area > face_area * 0.5:
-                                is_duplicate = True
-                                break
-                        
-                        if not is_duplicate:
-                            confidence = detection.score[0]
-                            all_faces.append({
-                                'bbox': [int(x1), int(y1), int(x2), int(y2)],  # Convert to int
-                                'confidence': float(confidence),  # Convert to float
-                                'method': 'MediaPipe'
-                            })
-                            detection_methods_used.append('MediaPipe')
-                
+            net = cv2.dnn.readNet(model_path, config_path)
         except Exception as e:
-            logger.error(f"MediaPipe detection error: {e}")
-            pass
-    
-    # Remove duplicate faces and assign IDs
+            logger.warning(f"DNN load failed: {e}")
+            net = None
+
+    # Lazy-init MTCNN if available
+    global _mtcnn_detector
+    if MTCNN_AVAILABLE and _mtcnn_detector is None:
+        try:
+            # Smaller min_face_size to catch distant faces
+            _mtcnn_detector = MTCNN(min_face_size=15)
+        except Exception as e:
+            logger.warning(f"MTCNN init failed: {e}")
+            _mtcnn_detector = None
+
+    # Iterate multi-scale versions to better catch small/far faces
+    for scaled_frame, scale in _generate_scaled_versions(enhanced):
+        sh, sw = scaled_frame.shape[:2]
+
+        # 1) OpenCV DNN (lower threshold)
+        if net is not None:
+            try:
+                blob = cv2.dnn.blobFromImage(scaled_frame, 1.0, (300, 300), [104, 117, 123], False, False)
+                net.setInput(blob)
+                detections = net.forward()
+                for i in range(detections.shape[2]):
+                    confidence = float(detections[0, 0, i, 2])
+                    if confidence >= 0.22:  # relaxed from 0.3
+                        x1 = int(detections[0, 0, i, 3] * sw)
+                        y1 = int(detections[0, 0, i, 4] * sh)
+                        x2 = int(detections[0, 0, i, 5] * sw)
+                        y2 = int(detections[0, 0, i, 6] * sh)
+                        # map back to original scale
+                        x1 = int(x1 / scale); y1 = int(y1 / scale); x2 = int(x2 / scale); y2 = int(y2 / scale)
+                        # bounds check
+                        x1 = max(0, min(x1, original_w)); y1 = max(0, min(y1, original_h))
+                        x2 = max(0, min(x2, original_w)); y2 = max(0, min(y2, original_h))
+                        if x2 > x1 and y2 > y1:
+                            all_faces.append({'bbox': [x1, y1, x2, y2], 'confidence': confidence, 'method': 'OpenCV DNN'})
+                            detection_methods_used.append('OpenCV DNN')
+            except Exception as e:
+                logger.debug(f"DNN detection error: {e}")
+
+        # 2) Haar Cascade at sensitive settings
+        try:
+            gray = cv2.cvtColor(scaled_frame, cv2.COLOR_BGR2GRAY)
+            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            for scale_factor in [1.05, 1.1, 1.2]:
+                faces = face_cascade.detectMultiScale(
+                    gray,
+                    scaleFactor=scale_factor,
+                    minNeighbors=3,
+                    minSize=(16, 16)
+                )
+                for (x, y, w, h) in faces:
+                    x1 = int(x / scale); y1 = int(y / scale); x2 = int((x + w) / scale); y2 = int((y + h) / scale)
+                    x1 = max(0, min(x1, original_w)); y1 = max(0, min(y1, original_h))
+                    x2 = max(0, min(x2, original_w)); y2 = max(0, min(y2, original_h))
+                    if x2 > x1 and y2 > y1:
+                        all_faces.append({'bbox': [x1, y1, x2, y2], 'confidence': 0.75, 'method': 'Haar Cascade'})
+                        detection_methods_used.append('Haar Cascade')
+        except Exception as e:
+            logger.debug(f"Haar detection error: {e}")
+
+        # 3) MediaPipe (lower confidence)
+        if MEDIAPIPE_AVAILABLE:
+            try:
+                with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.22) as face_detection:
+                    rgb = cv2.cvtColor(scaled_frame, cv2.COLOR_BGR2RGB)
+                    results = face_detection.process(rgb)
+                    if results.detections:
+                        for det in results.detections:
+                            bboxC = det.location_data.relative_bounding_box
+                            x1 = int(bboxC.xmin * sw); y1 = int(bboxC.ymin * sh)
+                            x2 = int((bboxC.xmin + bboxC.width) * sw); y2 = int((bboxC.ymin + bboxC.height) * sh)
+                            # map back
+                            x1 = int(x1 / scale); y1 = int(y1 / scale); x2 = int(x2 / scale); y2 = int(y2 / scale)
+                            x1 = max(0, min(x1, original_w)); y1 = max(0, min(y1, original_h))
+                            x2 = max(0, min(x2, original_w)); y2 = max(0, min(y2, original_h))
+                            if x2 > x1 and y2 > y1:
+                                conf = float(det.score[0]) if det.score else 0.5
+                                all_faces.append({'bbox': [x1, y1, x2, y2], 'confidence': conf, 'method': 'MediaPipe'})
+                                detection_methods_used.append('MediaPipe')
+            except Exception as e:
+                logger.debug(f"MediaPipe detection error: {e}")
+
+        # 4) MTCNN (optional if available)
+        if _mtcnn_detector is not None:
+            try:
+                # MTCNN expects RGB
+                rgb = cv2.cvtColor(scaled_frame, cv2.COLOR_BGR2RGB)
+                results = _mtcnn_detector.detect_faces(rgb)
+                for r in results or []:
+                    x, y, w, h = r.get('box', [0, 0, 0, 0])
+                    conf = float(r.get('confidence', 0.0))
+                    if conf >= 0.2 and w > 0 and h > 0:
+                        x1 = int(x / scale); y1 = int(y / scale); x2 = int((x + w) / scale); y2 = int((y + h) / scale)
+                        x1 = max(0, min(x1, original_w)); y1 = max(0, min(y1, original_h))
+                        x2 = max(0, min(x2, original_w)); y2 = max(0, min(y2, original_h))
+                        if x2 > x1 and y2 > y1:
+                            all_faces.append({'bbox': [x1, y1, x2, y2], 'confidence': conf, 'method': 'MTCNN'})
+                            detection_methods_used.append('MTCNN')
+            except Exception as e:
+                logger.debug(f"MTCNN detection error: {e}")
+
+    # Merge duplicates with NMS
+    merged_faces = _nms_merge(all_faces, iou_threshold=0.4)
+
+    # Assign IDs
     final_faces = []
-    for i, face in enumerate(all_faces):
-        face['face_id'] = int(i + 1)  # Convert to int
+    for i, face in enumerate(merged_faces):
+        face['face_id'] = int(i + 1)
         final_faces.append(face)
-    
-    # Create annotated frame
+
+    # Annotate
     annotated_frame = frame.copy()
-    
-    # Draw all detected faces
     for face in final_faces:
         x1, y1, x2, y2 = face['bbox']
-        
-        # Draw bounding box
         cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        
-        # Add face ID and confidence
-        cv2.putText(annotated_frame, f"Face {face['face_id']} ({face['confidence']:.2f})", 
-                   (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-        
-        # Add detection method
-        cv2.putText(annotated_frame, face['method'], 
-                   (x1, y2+20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
-    
-    # Determine detection method for return
-    if detection_methods_used:
-        detection_method = f"Combined: {', '.join(set(detection_methods_used))}"
-    else:
-        detection_method = "OpenCV Haar Cascade (fallback)"
-    
+        cv2.putText(annotated_frame, f"Face {face['face_id']} ({face.get('confidence', 0):.2f})",
+                    (x1, max(0, y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        cv2.putText(annotated_frame, face.get('method', 'N/A'),
+                    (x1, min(annotated_frame.shape[0] - 5, y2 + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
+
+    detection_method = f"Combined: {', '.join(sorted(set(detection_methods_used)))}" if detection_methods_used else "Fallback: Haar"
     return annotated_frame, final_faces, detection_method
 
 @app.route('/static/<path:filename>')
