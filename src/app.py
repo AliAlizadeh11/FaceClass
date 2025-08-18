@@ -24,6 +24,8 @@ from services.video_processor import VideoProcessor
 from services.visualization import VisualizationService
 from services.emotion_analysis import analyze_emotions
 from services.attention_analysis import analyze_attention
+from services.attendance_manager import AttendanceManager
+from services.spatial_analysis import generate_heatmap, render_movement_paths, render_seat_map
 
 # Team 1 Components
 from detection.model_comparison import ModelBenchmarker
@@ -78,6 +80,7 @@ app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024 # 500MB max file size
 config = Config()
 video_processor = VideoProcessor(config.config)
 visualizer = VisualizationService(config.config)
+attendance_manager = AttendanceManager()
 
 # Team 1 Component Initialization
 try:
@@ -882,6 +885,9 @@ def process_video_frames():
             
             logger.info(f"Processing {max_frames} frames with interval {frame_interval}")
             
+            # spatial tracking: collect center positions per student
+            positions_by_student = {}
+
             for i, frame_num in enumerate(range(0, total_frames, frame_interval)):
                 if i >= max_frames:  # Stop after max_frames
                     break
@@ -905,6 +911,12 @@ def process_video_frames():
                         # Draw ID label
                         x1, y1, x2, y2 = det['bbox']
                         cv2.putText(annotated_frame, sid, (x1, max(0, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+                        # Attendance: mark presence (count frames)
+                        attendance_manager.add_presence('session_default', sid, frames=1)
+                        # Spatial center
+                        cx, cy = int((x1 + x2) / 2), int((y1 + y2) / 2)
+                        positions_by_student.setdefault(sid, []).append((cx, cy))
 
                         # Team 2: Emotion & Attention analysis
                         # Emotion
@@ -1019,6 +1031,30 @@ def process_video_frames():
                     'gaze_distribution': gaze_stats
                 })
             
+            # Team 3: spatial outputs for the video size (use last frame size if available)
+            if processed_frames:
+                # Decode one frame's size by reading back original
+                h, w = frame.shape[:2]
+            else:
+                h, w = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 720), int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 1280)
+
+            heatmap_img = generate_heatmap(positions_by_student, (h, w))
+            paths_img = render_movement_paths(positions_by_student, (h, w))
+            seats_img = render_seat_map(positions_by_student, (h, w))
+
+            # Encode images as base64 for API
+            def _b64img(img):
+                import base64
+                _, buf = cv2.imencode('.jpg', img)
+                return 'data:image/jpeg;base64,' + base64.b64encode(buf).decode('utf-8')
+
+            heatmap_b64 = _b64img(heatmap_img)
+            paths_b64 = _b64img(paths_img)
+            seats_b64 = _b64img(seats_img)
+
+            # Attendance durations in seconds
+            attendance_seconds = attendance_manager.get_session_summary('session_default', fps)
+
             return jsonify({
                 'success': True,
                 'total_frames': int(total_frames),
@@ -1026,6 +1062,12 @@ def process_video_frames():
                 'duration': float(duration),
                 'processed_frames': processed_frames,
                 'student_summaries': student_summaries,
+                'attendance_seconds': attendance_seconds,
+                'spatial': {
+                    'heatmap': heatmap_b64,
+                    'movement_paths': paths_b64,
+                    'seat_map': seats_b64
+                },
                 'message': f'Processed {len(processed_frames)} frames with face detection'
             })
             

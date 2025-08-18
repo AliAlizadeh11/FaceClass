@@ -480,6 +480,102 @@
             </div>
         </div>
 
+        <!-- Team 3: Attendance & Spatial Analysis -->
+        <div class="row mt-5" id="team3-analysis">
+            <div class="col-lg-10 mx-auto">
+                <div class="feature-card p-5">
+                    <h3 class="text-center mb-4">
+                        <i class="fas fa-users"></i> Attendance & Spatial Analysis (Team 3)
+                    </h3>
+
+                    <div class="upload-area" id="uploadAreaTeam3">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                        <h5>Drag & Drop your classroom video here</h5>
+                        <p class="text-muted">or click to browse files</p>
+                        <small class="text-muted">Supports MP4, AVI, MOV formats up to 500MB</small>
+                    </div>
+
+                    <input type="file" id="videoFileTeam3" accept="video/*" class="d-none">
+
+                    <div class="text-center mt-4">
+                        <button class="btn btn-custom" id="runTeam3Analysis" disabled>
+                            <i class="fas fa-user-check"></i> Run Attendance & Spatial Analysis
+                        </button>
+                    </div>
+
+                    <div id="team3ProgressSection" class="mt-4" style="display: none;">
+                        <div class="progress progress-custom mb-3">
+                            <div class="progress-bar progress-bar-custom" id="team3ProgressBar" style="width: 0%"></div>
+                        </div>
+                        <p class="text-center mb-0">
+                            <span id="team3ProgressText">Preparing analysis...</span>
+                        </p>
+                    </div>
+
+                    <div id="team3Results" class="mt-4" style="display: none;">
+                        <div class="row">
+                            <div class="col-lg-6 mb-4">
+                                <h5><i class="fas fa-clipboard-list"></i> Attendance Summary</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-bordered mb-2" id="team3AttendanceTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Student ID</th>
+                                                <th>Time Present (s)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-secondary-custom" id="downloadTeam3AttendanceCSV">
+                                        <i class="fas fa-file-download"></i> Download Attendance CSV
+                                    </button>
+                                    <button class="btn btn-outline-secondary" id="adjustTeam3Positions">
+                                        <i class="fas fa-edit"></i> Adjust Positions (Manual)
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 mb-4">
+                                <h5><i class="fas fa-map"></i> Spatial Visualizations</h5>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="text-center">
+                                            <small class="text-muted d-block">Heatmap</small>
+                                            <img id="team3HeatmapImg" class="img-fluid rounded border" alt="Heatmap" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="text-center">
+                                            <small class="text-muted d-block">Movement Paths</small>
+                                            <img id="team3PathsImg" class="img-fluid rounded border" alt="Movement Paths" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="text-center">
+                                            <small class="text-muted d-block">Seat Map</small>
+                                            <img id="team3SeatsImg" class="img-fluid rounded border" alt="Seat Map" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2 mt-3">
+                                    <button class="btn btn-outline-primary" id="downloadTeam3Heatmap">
+                                        <i class="fas fa-download"></i> Download Heatmap
+                                    </button>
+                                    <button class="btn btn-outline-primary" id="downloadTeam3Paths">
+                                        <i class="fas fa-download"></i> Download Paths
+                                    </button>
+                                    <button class="btn btn-outline-primary" id="downloadTeam3Seats">
+                                        <i class="fas fa-download"></i> Download Seat Map
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Demo Section -->
         <div class="demo-section">
             <div class="container">
@@ -674,6 +770,114 @@
                     URL.revokeObjectURL(url);
                 });
             }
+
+            // ===== Team 3: Attendance & Spatial Analysis (Home page) =====
+            const uploadAreaTeam3 = document.getElementById('uploadAreaTeam3');
+            const videoFileTeam3 = document.getElementById('videoFileTeam3');
+            const runTeam3Analysis = document.getElementById('runTeam3Analysis');
+            const team3ProgressSection = document.getElementById('team3ProgressSection');
+            const team3ProgressBar = document.getElementById('team3ProgressBar');
+            const team3ProgressText = document.getElementById('team3ProgressText');
+            const team3Results = document.getElementById('team3Results');
+            const team3AttendanceTable = document.getElementById('team3AttendanceTable').querySelector('tbody');
+            const team3HeatmapImg = document.getElementById('team3HeatmapImg');
+            const team3PathsImg = document.getElementById('team3PathsImg');
+            const team3SeatsImg = document.getElementById('team3SeatsImg');
+            const downloadTeam3AttendanceCSV = document.getElementById('downloadTeam3AttendanceCSV');
+            const downloadTeam3Heatmap = document.getElementById('downloadTeam3Heatmap');
+            const downloadTeam3Paths = document.getElementById('downloadTeam3Paths');
+            const downloadTeam3Seats = document.getElementById('downloadTeam3Seats');
+
+            function setTeam3File(file) {
+                if (!uploadAreaTeam3 || !runTeam3Analysis) return;
+                if (file.type.startsWith('video/')) {
+                    uploadAreaTeam3.innerHTML = `
+                        <i class=\"fas fa-check-circle fa-3x text-success mb-3\"></i>
+                        <h5>Video Selected!</h5>
+                        <p class=\"text-muted\">${file.name}</p>
+                        <small class=\"text-muted\">Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB</small>
+                    `;
+                    runTeam3Analysis.disabled = false;
+                } else {
+                    alert('Please select a valid video file.');
+                }
+            }
+
+            if (uploadAreaTeam3) {
+                uploadAreaTeam3.addEventListener('click', () => videoFileTeam3.click());
+                uploadAreaTeam3.addEventListener('dragover', (e) => { e.preventDefault(); uploadAreaTeam3.classList.add('dragover'); });
+                uploadAreaTeam3.addEventListener('dragleave', () => uploadAreaTeam3.classList.remove('dragover'));
+                uploadAreaTeam3.addEventListener('drop', (e) => {
+                    e.preventDefault(); uploadAreaTeam3.classList.remove('dragover');
+                    const files = e.dataTransfer.files; if (files.length > 0) setTeam3File(files[0]);
+                    videoFileTeam3.files = files;
+                });
+            }
+            if (videoFileTeam3) {
+                videoFileTeam3.addEventListener('change', (e) => { if (e.target.files.length > 0) setTeam3File(e.target.files[0]); });
+            }
+
+            if (runTeam3Analysis) {
+                runTeam3Analysis.addEventListener('click', async () => {
+                    if (!videoFileTeam3.files || !videoFileTeam3.files[0]) { alert('Please select a video file first.'); return; }
+                    team3ProgressSection.style.display = 'block';
+                    team3ProgressBar.style.width = '10%';
+                    team3ProgressText.textContent = 'Uploading video...';
+                    const formData = new FormData();
+                    formData.append('video', videoFileTeam3.files[0]);
+                    try {
+                        const resp = await fetch('/api/process-video-frames', { method: 'POST', body: formData });
+                        team3ProgressBar.style.width = '60%';
+                        team3ProgressText.textContent = 'Analyzing attendance & spatial data...';
+                        const data = await resp.json();
+                        team3ProgressBar.style.width = '100%';
+                        team3ProgressText.textContent = 'Analysis complete';
+
+                        // Attendance table
+                        team3AttendanceTable.innerHTML = '';
+                        const att = data.attendance_seconds || {};
+                        Object.keys(att).sort().forEach(sid => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `<td>${sid}</td><td>${att[sid].toFixed(1)}</td>`;
+                            team3AttendanceTable.appendChild(tr);
+                        });
+
+                        // Spatial images
+                        if (data.spatial) {
+                            team3HeatmapImg.src = data.spatial.heatmap || '';
+                            team3PathsImg.src = data.spatial.movement_paths || '';
+                            team3SeatsImg.src = data.spatial.seat_map || '';
+                        }
+                        team3Results.style.display = 'block';
+                    } catch (e) {
+                        alert('Analysis failed. Please try again.');
+                    }
+                });
+            }
+
+            function downloadImageFromImgTag(imgEl, filename) {
+                if (!imgEl || !imgEl.src) { alert('No image to download'); return; }
+                const a = document.createElement('a');
+                a.href = imgEl.src; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            }
+
+            if (downloadTeam3AttendanceCSV) {
+                downloadTeam3AttendanceCSV.addEventListener('click', () => {
+                    const rows = [['Student ID','Time Present (s)']];
+                    document.querySelectorAll('#team3AttendanceTable tbody tr').forEach(tr => {
+                        const tds = tr.querySelectorAll('td');
+                        rows.push([tds[0].textContent, tds[1].textContent]);
+                    });
+                    const csv = rows.map(r => r.join(',')).join('\n');
+                    const blob = new Blob([csv], {type:'text/csv'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = `attendance_${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+                });
+            }
+            if (downloadTeam3Heatmap) downloadTeam3Heatmap.addEventListener('click', () => downloadImageFromImgTag(team3HeatmapImg, 'heatmap.jpg'));
+            if (downloadTeam3Paths) downloadTeam3Paths.addEventListener('click', () => downloadImageFromImgTag(team3PathsImg, 'paths.jpg'));
+            if (downloadTeam3Seats) downloadTeam3Seats.addEventListener('click', () => downloadImageFromImgTag(team3SeatsImg, 'seats.jpg'));
         });
     </script>
 </body>
