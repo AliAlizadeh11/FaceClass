@@ -22,6 +22,8 @@ sys.path.append(str(Path(__file__).parent))
 from config import Config
 from services.video_processor import VideoProcessor
 from services.visualization import VisualizationService
+from services.emotion_analysis import analyze_emotions
+from services.attention_analysis import analyze_attention
 
 # Team 1 Components
 from detection.model_comparison import ModelBenchmarker
@@ -930,6 +932,34 @@ def process_video_frames():
                         gaze_dir = attention.get('gaze_direction', 'unknown')
                         agg['gaze'][gaze_dir] = agg['gaze'].get(gaze_dir, 0) + 1
 
+                    # After assigning IDs, perform batched emotion prediction per frame
+                    frame_crops = []
+                    for d in face_detections:
+                        crop = _crop_face_region(frame, d['bbox'])
+                        frame_crops.append(crop)
+                    valid_crops = [c for c in frame_crops if c is not None]
+                    preds = analyze_emotions(valid_crops) if valid_crops else []
+                    pi = 0
+                    for idx, d in enumerate(face_detections):
+                        if frame_crops[idx] is not None:
+                            label = preds[pi] if pi < len(preds) else 'neutral'
+                            pi += 1
+                        else:
+                            label = 'neutral'
+                        d['emotion'] = {'label': label}
+
+                    # Per-frame attention estimation: light proxy based on bbox center offset
+                    for d in face_detections:
+                        x1, y1, x2, y2 = d['bbox']
+                        cx = (x1 + x2) / 2.0
+                        cy = (y1 + y2) / 2.0
+                        nx = (cx - (frame.shape[1] / 2.0)) / (frame.shape[1] / 2.0)
+                        ny = (cy - (frame.shape[0] / 2.0)) / (frame.shape[0] / 2.0)
+                        yaw = float(nx * 30.0)
+                        pitch = float(ny * 20.0)
+                        roll = 0.0
+                        d['attention'] = analyze_attention({'yaw': yaw, 'pitch': pitch, 'roll': roll})
+
                     # Convert frame to base64
                     import base64
                     _, buffer = cv2.imencode('.jpg', annotated_frame)
@@ -943,7 +973,9 @@ def process_video_frames():
                             'bbox': [int(x) for x in face['bbox']],
                             'confidence': float(face['confidence']),
                             'method': str(face['method']),
-                            'student_id': str(face.get('student_id', ''))
+                            'student_id': str(face.get('student_id', '')),
+                            'emotion': face.get('emotion', {}),
+                            'attention': face.get('attention', {})
                         }
                         serializable_detections.append(serializable_face)
                     
