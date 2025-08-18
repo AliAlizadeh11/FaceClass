@@ -417,12 +417,6 @@
                 
                 <!-- Single Composite Result -->
                 <div id="compositeResult" class="composite-result" style="display: none;">
-                    <h4 class="text-center mb-4">
-                        <i class="fas fa-th"></i> Face Detection Composite Result
-                    </h4>
-                    <p class="text-center text-muted mb-4">
-                        All detected faces merged into a single composite image
-                    </p>
                     
                     <!-- Annotated classroom preview with bounding boxes and IDs -->
                     <div class="annotated-preview mb-4">
@@ -432,45 +426,17 @@
                         </div>
                     </div>
 
-                    <div class="composite-container">
-                        <div class="composite-image-wrapper">
-                            <img id="compositeImage" src="" alt="Face Detection Composite" class="composite-image">
-                        </div>
-                        
-                        <div class="composite-info">
-                            <div class="info-card">
-                                <h5><i class="fas fa-info-circle"></i> Processing Summary</h5>
-                                <div class="info-grid">
-                                    <div class="info-item">
-                                        <span class="info-label">Total Faces:</span>
-                                        <span class="info-value" id="compositeTotalFaces">-</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <span class="info-label">Frames Processed:</span>
-                                        <span class="info-value" id="compositeFramesProcessed">-</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <span class="info-label">Detection Method:</span>
-                                        <span class="info-value" id="compositeDetectionMethod">-</span>
-                                    </div>
-                                    <div class="info-item">
-                                        <span class="info-label">Processing Time:</span>
-                                        <span class="info-value" id="compositeProcessingTime">-</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="download-section">
-                                <h6><i class="fas fa-download"></i> Download Results</h6>
-                                <div class="download-buttons">
-                                    <button class="btn btn-outline-primary btn-sm" id="downloadComposite">
-                                        <i class="fas fa-image"></i> Download Composite
-                                    </button>
-                                    <button class="btn btn-outline-success btn-sm" id="downloadReport">
-                                        <i class="fas fa-file-alt"></i> Download Report
-                                    </button>
-                                </div>
-                            </div>
+                    <!-- Keep the composite image hidden from the UI but prepare a downloadable composite -->
+                    <div class="download-section mt-3">
+                        <div class="download-buttons">
+                            <button class="btn btn-outline-primary btn-sm" id="downloadComposite">
+                                <i class="fas fa-image"></i> Download Composite
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" id="downloadReport">
+                                <i class="fas fa-file-alt"></i> Download Report
+                            </button>
+                            <!-- Hidden composite preview element (kept for data URL only) -->
+                            <img id="compositeImage" src="" alt="Hidden Composite" class="d-none" style="display:none;">
                         </div>
                     </div>
                 </div>
@@ -868,6 +834,7 @@
 
                 // Update preview image
                 if (compositeImage) {
+                    // Keep hidden but store data URL for fallback download
                     compositeImage.src = canvas.toDataURL('image/png');
                     compositeImage.alt = `Composite of ${total} faces`;
                 }
