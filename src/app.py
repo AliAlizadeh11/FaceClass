@@ -46,6 +46,13 @@ except ImportError:
 if MEDIAPIPE_AVAILABLE:
     mp_face_detection = mp.solutions.face_detection
     mp_drawing = mp.solutions.drawing_utils
+    try:
+        mp_face_mesh = mp.solutions.face_mesh
+        FACE_MESH_AVAILABLE = True
+        logger.info("✅ MediaPipe FaceMesh ready for attention analysis")
+    except Exception:
+        FACE_MESH_AVAILABLE = False
+        logger.info("ℹ️ MediaPipe FaceMesh not available; limited attention analysis")
     logger.info("✅ MediaPipe FaceDetection ready")
 
 # Optional: MTCNN (for stronger small/blurred face detection)
@@ -789,6 +796,9 @@ def process_video_frames():
             frame_interval = max(1, total_frames // 20)  # Get ~20 frames
             processed_frames = []
 
+            # Team 2: per-student aggregation across frames
+            student_aggregate = {}  # student_id -> {'frames': int, 'emotions': {label: count}, 'engaged_frames': int, 'gaze': {dir: count}}
+
             # Session-level unique ID assignment using simple embeddings (in-memory)
             session_entities = []  # list of dicts: { 'id': str, 'embedding': np.ndarray, 'count': int }
             next_entity_idx = 1
@@ -894,6 +904,32 @@ def process_video_frames():
                         x1, y1, x2, y2 = det['bbox']
                         cv2.putText(annotated_frame, sid, (x1, max(0, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
+                        # Team 2: Emotion & Attention analysis
+                        # Emotion
+                        emotion_label, emotion_conf = _analyze_emotion(face_img)
+                        det['emotion'] = {'label': emotion_label, 'confidence': float(emotion_conf)}
+                        # Attention
+                        attention = _analyze_attention(frame, det['bbox'])
+                        det['attention'] = attention
+
+                        # Aggregate per student
+                        agg = student_aggregate.setdefault(sid, {
+                            'frames': 0,
+                            'emotions': {},
+                            'engaged_frames': 0,
+                            'gaze': {}
+                        })
+                        agg['frames'] += 1
+                        # emotion counts
+                        if emotion_label:
+                            agg['emotions'][emotion_label] = agg['emotions'].get(emotion_label, 0) + 1
+                        # engaged
+                        if attention.get('engaged', False):
+                            agg['engaged_frames'] += 1
+                        # gaze dir
+                        gaze_dir = attention.get('gaze_direction', 'unknown')
+                        agg['gaze'][gaze_dir] = agg['gaze'].get(gaze_dir, 0) + 1
+
                     # Convert frame to base64
                     import base64
                     _, buffer = cv2.imencode('.jpg', annotated_frame)
@@ -927,6 +963,29 @@ def process_video_frames():
             os.unlink(temp_video_path)
             
             logger.info(f"Video processing completed: {len(processed_frames)} frames processed")
+
+            # Build per-student summaries
+            student_summaries = []
+            for sid, agg in student_aggregate.items():
+                frames = max(1, agg['frames'])
+                engagement = float(agg['engaged_frames']) / float(frames)
+                # Top emotion
+                emotions_sorted = sorted(agg['emotions'].items(), key=lambda kv: kv[1], reverse=True)
+                top_emotion = emotions_sorted[0][0] if emotions_sorted else 'neutral'
+                # Normalize emotion distribution
+                emotion_stats = {
+                    k: round(v / frames, 3) for k, v in agg['emotions'].items()
+                }
+                # Gaze distribution
+                gaze_stats = {k: round(v / frames, 3) for k, v in agg['gaze'].items()}
+                student_summaries.append({
+                    'student_id': sid,
+                    'frames_seen': int(frames),
+                    'engagement_ratio': round(engagement, 3),
+                    'top_emotion': top_emotion,
+                    'emotion_distribution': emotion_stats,
+                    'gaze_distribution': gaze_stats
+                })
             
             return jsonify({
                 'success': True,
@@ -934,6 +993,7 @@ def process_video_frames():
                 'fps': float(fps),
                 'duration': float(duration),
                 'processed_frames': processed_frames,
+                'student_summaries': student_summaries,
                 'message': f'Processed {len(processed_frames)} frames with face detection'
             })
             
@@ -1146,6 +1206,80 @@ def detect_faces_in_frame(frame):
 
     detection_method = f"Combined: {', '.join(sorted(set(detection_methods_used)))}" if detection_methods_used else "Fallback: Haar"
     return annotated_frame, final_faces, detection_method
+
+
+# ==============================
+# Team 2: Emotion & Attention
+# ==============================
+
+def _analyze_emotion(face_img: np.ndarray) -> tuple:
+    """Placeholder emotion analysis using simple heuristics or external models if available.
+    Returns (label, confidence). Integrate FER2013/AffectNet here when models are present.
+    """
+    try:
+        # Simple brightness-based heuristic as a placeholder; replace with real model inference
+        gray = cv2.cvtColor(face_img, cv2.COLOR_BGR2GRAY)
+        mean_intensity = float(np.mean(gray))
+        # Map to pseudo-emotions for demo; real implementation would use model outputs
+        if mean_intensity > 170:
+            return 'surprise', 0.65
+        elif mean_intensity > 140:
+            return 'happy', 0.7
+        elif mean_intensity < 70:
+            return 'sad', 0.6
+        else:
+            return 'neutral', 0.55
+    except Exception:
+        return 'neutral', 0.5
+
+
+def _analyze_attention(frame: np.ndarray, bbox) -> dict:
+    """Estimate attention from head pose/gaze using MediaPipe FaceMesh if available.
+    Returns dict: { engaged: bool, gaze_direction: str, head_pose: {yaw, pitch, roll} }
+    """
+    x1, y1, x2, y2 = [int(v) for v in bbox]
+    x1 = max(0, x1); y1 = max(0, y1); x2 = min(frame.shape[1], x2); y2 = min(frame.shape[0], y2)
+    roi = frame[y1:y2, x1:x2]
+    if roi.size == 0:
+        return {'engaged': False, 'gaze_direction': 'unknown', 'head_pose': {'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0}}
+
+    if MEDIAPIPE_AVAILABLE and 'FACE_MESH_AVAILABLE' in globals() and FACE_MESH_AVAILABLE:
+        try:
+            with mp_face_mesh.FaceMesh(static_image_mode=True, refine_landmarks=True, max_num_faces=1) as mesh:
+                rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
+                res = mesh.process(rgb)
+                if res.multi_face_landmarks:
+                    # Very light-weight head pose approximation from eye/nose landmarks
+                    lm = res.multi_face_landmarks[0]
+                    # Use a subset of landmarks (nose tip 1, eyes 33 & 263 approx for mesh)
+                    def _pt(idx):
+                        p = lm.landmark[idx]
+                        return np.array([p.x, p.y])
+                    left_eye = _pt(33)
+                    right_eye = _pt(263)
+                    nose = _pt(1)
+                    # Horizontal gaze: compare nose x to mid-eye
+                    mid_eye_x = (left_eye[0] + right_eye[0]) / 2.0
+                    gaze_dir = 'center'
+                    if nose[0] - mid_eye_x > 0.015:
+                        gaze_dir = 'right'
+                    elif mid_eye_x - nose[0] > 0.015:
+                        gaze_dir = 'left'
+                    # Vertical pose approx via eye-nose y
+                    pitch = float((nose[1] - (left_eye[1] + right_eye[1]) / 2.0) * 100.0)
+                    yaw = float((right_eye[0] - left_eye[0]) * 100.0)
+                    roll = 0.0
+                    engaged = gaze_dir == 'center' and abs(pitch) < 5.0
+                    return {
+                        'engaged': bool(engaged),
+                        'gaze_direction': gaze_dir,
+                        'head_pose': {'yaw': round(yaw, 2), 'pitch': round(pitch, 2), 'roll': round(roll, 2)}
+                    }
+        except Exception:
+            pass
+
+    # Fallback attention
+    return {'engaged': False, 'gaze_direction': 'unknown', 'head_pose': {'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0}}
 
 @app.route('/static/<path:filename>')
 def static_files(filename):

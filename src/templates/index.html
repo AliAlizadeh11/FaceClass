@@ -435,6 +435,51 @@
             </div>
         </div>
 
+        <!-- Team 2: Upload Video & Emotion/Attention Analysis -->
+        <div class="row mt-5" id="team2-analysis">
+            <div class="col-lg-8 mx-auto">
+                <div class="feature-card p-5">
+                    <h3 class="text-center mb-4">
+                        <i class="fas fa-brain"></i> Upload Video & Emotion/Attention Analysis
+                    </h3>
+
+                    <div class="upload-area" id="uploadAreaTeam2">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                        <h5>Drag & Drop your classroom video here</h5>
+                        <p class="text-muted">or click to browse files</p>
+                        <small class="text-muted">Supports MP4, AVI, MOV formats up to 500MB</small>
+                    </div>
+
+                    <input type="file" id="videoFileTeam2" accept="video/*" class="d-none">
+
+                    <div class="text-center mt-4">
+                        <button class="btn btn-custom" id="runTeam2Analysis" disabled>
+                            <i class="fas fa-chart-line"></i> Run Emotion & Attention Analysis
+                        </button>
+                    </div>
+
+                    <div id="team2ProgressSection" class="mt-4" style="display: none;">
+                        <div class="progress progress-custom mb-3">
+                            <div class="progress-bar progress-bar-custom" id="team2ProgressBar" style="width: 0%"></div>
+                        </div>
+                        <p class="text-center mb-0">
+                            <span id="team2ProgressText">Preparing analysis...</span>
+                        </p>
+                    </div>
+
+                    <div id="team2Results" class="mt-4" style="display: none;">
+                        <h5 class="text-center mb-3"><i class="fas fa-user-graduate"></i> Per-Student Results</h5>
+                        <div id="team2ResultsList" class="list-group"></div>
+                        <div class="text-center mt-3">
+                            <button class="btn btn-secondary-custom" id="downloadTeam2Report">
+                                <i class="fas fa-file-download"></i> Download Summary Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Demo Section -->
         <div class="demo-section">
             <div class="container">
@@ -526,6 +571,109 @@
                 // Navigate to video frames display
                 window.location.href = '/video-frames';
             });
+
+            // ===== Team 2: Emotion & Attention Analysis (Home page) =====
+            const uploadAreaTeam2 = document.getElementById('uploadAreaTeam2');
+            const videoFileTeam2 = document.getElementById('videoFileTeam2');
+            const runTeam2Analysis = document.getElementById('runTeam2Analysis');
+            const team2ProgressSection = document.getElementById('team2ProgressSection');
+            const team2ProgressBar = document.getElementById('team2ProgressBar');
+            const team2ProgressText = document.getElementById('team2ProgressText');
+            const team2Results = document.getElementById('team2Results');
+            const team2ResultsList = document.getElementById('team2ResultsList');
+            const downloadTeam2Report = document.getElementById('downloadTeam2Report');
+
+            function setTeam2File(file) {
+                if (!uploadAreaTeam2 || !runTeam2Analysis) return;
+                if (file.type.startsWith('video/')) {
+                    uploadAreaTeam2.innerHTML = `
+                        <i class=\"fas fa-check-circle fa-3x text-success mb-3\"></i>
+                        <h5>Video Selected!</h5>
+                        <p class=\"text-muted\">${file.name}</p>
+                        <small class=\"text-muted\">Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB</small>
+                    `;
+                    runTeam2Analysis.disabled = false;
+                } else {
+                    alert('Please select a valid video file.');
+                }
+            }
+
+            if (uploadAreaTeam2) {
+                uploadAreaTeam2.addEventListener('click', () => videoFileTeam2.click());
+                uploadAreaTeam2.addEventListener('dragover', (e) => { e.preventDefault(); uploadAreaTeam2.classList.add('dragover'); });
+                uploadAreaTeam2.addEventListener('dragleave', () => uploadAreaTeam2.classList.remove('dragover'));
+                uploadAreaTeam2.addEventListener('drop', (e) => {
+                    e.preventDefault(); uploadAreaTeam2.classList.remove('dragover');
+                    const files = e.dataTransfer.files; if (files.length > 0) setTeam2File(files[0]);
+                    videoFileTeam2.files = files;
+                });
+            }
+            if (videoFileTeam2) {
+                videoFileTeam2.addEventListener('change', (e) => { if (e.target.files.length > 0) setTeam2File(e.target.files[0]); });
+            }
+
+            if (runTeam2Analysis) {
+                runTeam2Analysis.addEventListener('click', async () => {
+                    if (!videoFileTeam2.files || !videoFileTeam2.files[0]) { alert('Please select a video file first.'); return; }
+                    team2ProgressSection.style.display = 'block';
+                    team2ProgressBar.style.width = '10%';
+                    team2ProgressText.textContent = 'Uploading video...';
+                    const formData = new FormData();
+                    formData.append('video', videoFileTeam2.files[0]);
+                    try {
+                        const resp = await fetch('/api/process-video-frames', { method: 'POST', body: formData });
+                        team2ProgressBar.style.width = '60%';
+                        team2ProgressText.textContent = 'Analyzing frames (Emotion & Attention)...';
+                        const data = await resp.json();
+                        team2ProgressBar.style.width = '100%';
+                        team2ProgressText.textContent = 'Analysis complete';
+                        const summaries = Array.isArray(data.student_summaries) ? data.student_summaries : [];
+                        team2ResultsList.innerHTML = '';
+                        summaries.forEach(s => {
+                            const item = document.createElement('div');
+                            item.className = 'list-group-item';
+                            item.innerHTML = `
+                                <div class=\"d-flex w-100 justify-content-between\">
+                                    <h6 class=\"mb-1\">${s.student_id}</h6>
+                                    <small>Frames: ${s.frames_seen} • Engagement: ${(s.engagement_ratio*100).toFixed(0)}%</small>
+                                </div>
+                                <p class=\"mb-1\">Top Emotion: <strong>${s.top_emotion}</strong></p>
+                                <small>Emotions: ${JSON.stringify(s.emotion_distribution)} | Gaze: ${JSON.stringify(s.gaze_distribution)}</small>
+                            `;
+                            team2ResultsList.appendChild(item);
+                        });
+                        team2Results.style.display = 'block';
+                    } catch (e) {
+                        alert('Analysis failed. Please try again.');
+                    }
+                });
+            }
+
+            if (downloadTeam2Report) {
+                downloadTeam2Report.addEventListener('click', () => {
+                    const items = team2ResultsList.querySelectorAll('.list-group-item');
+                    const lines = ['Student ID,Frames Seen,Engagement Ratio,Top Emotion,Emotion Distribution,Gaze Distribution'];
+                    items.forEach(item => {
+                        const sid = item.querySelector('h6').textContent.trim();
+                        const top = (item.querySelector('p strong')||{}).textContent||'';
+                        const smalls = item.querySelectorAll('small');
+                        const frames = (smalls[0].textContent.match(/Frames: (\d+)/)||[])[1]||'0';
+                        const eng = (smalls[0].textContent.match(/Engagement: (\d+)%/)||[])[1]||'0';
+                        const emo = (smalls[1].textContent.match(/Emotions: (\{.*?\})/)||[])[1]||'{}';
+                        const gaze = (smalls[1].textContent.match(/Gaze: (\{.*\})/)||[])[1]||'{}';
+                        lines.push(`${sid},${frames},${eng}%,${top},"${emo}","${gaze}"`);
+                    });
+                    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `team2_summary_${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+            }
         });
     </script>
 </body>
