@@ -955,9 +955,17 @@ def process_video_frames():
                         if not sid:
                             sid = "ID_UNK"
                         det['student_id'] = sid
-                        # Draw ID label
+                        # Draw ID label (thin, modern style above bbox)
                         x1, y1, x2, y2 = det['bbox']
-                        cv2.putText(annotated_frame, sid, (x1, max(0, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                        cv2.putText(
+                            annotated_frame,
+                            sid,
+                            (x1 + 2, max(12, y1 - 6)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.45,
+                            (220, 80, 80),
+                            1
+                        )
 
                         # Attendance: mark presence (count frames)
                         attendance_manager.add_presence('session_default', sid, frames=1)
@@ -1320,11 +1328,12 @@ def detect_faces_in_frame(frame):
     annotated_frame = frame.copy()
     for face in final_faces:
         x1, y1, x2, y2 = face['bbox']
-        cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        # Thin rectangle and thin label text for subtle styling
+        cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 220, 0), 1)
         cv2.putText(annotated_frame, f"Face {face['face_id']} ({face.get('confidence', 0):.2f})",
-                    (x1, max(0, y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                    (x1 + 2, max(12, y1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 220, 0), 1)
         cv2.putText(annotated_frame, face.get('method', 'N/A'),
-                    (x1, min(annotated_frame.shape[0] - 5, y2 + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
+                    (x1 + 2, min(annotated_frame.shape[0] - 5, y2 + 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (180, 120, 50), 1)
 
     detection_method = f"Combined: {', '.join(sorted(set(detection_methods_used)))}" if detection_methods_used else "Fallback: Haar"
     return annotated_frame, final_faces, detection_method

@@ -34,10 +34,10 @@ class VisualizationService:
             'text_bg': (0, 0, 0)                     # Black
         }
         
-        # Font settings
+        # Font settings (thin, modern look)
         self.font = cv2.FONT_HERSHEY_SIMPLEX
-        self.font_scale = 0.6
-        self.font_thickness = 2
+        self.font_scale = 0.5
+        self.font_thickness = 1
         self.text_thickness = 1
         
         # Create output directories
@@ -100,103 +100,56 @@ class VisualizationService:
             else:
                 color = self.colors['unknown']  # Red
             
-            # Draw bounding box
+            # Draw bounding box (thin stroke)
             cv2.rectangle(
                 annotated_frame, 
                 (x, y), 
                 (x + w, y + h), 
                 color, 
-                3
+                1
             )
             
-            # Prepare label text
+            # Prepare label text (draw above bbox to avoid covering the face)
             if student_id != 'unknown':
                 label = f"Name: {student_id}"
             else:
                 label = f"ID: {track_id}"
             
-            # Calculate text position and size
-            (text_width, text_height), baseline = cv2.getTextSize(
-                label, self.font, self.font_scale, self.font_thickness
-            )
-            
-            # Draw text background
-            text_bg_x1 = x
-            text_bg_y1 = max(0, y - text_height - 10)
-            text_bg_x2 = x + text_width + 10
-            text_bg_y2 = y
-            
-            cv2.rectangle(
-                annotated_frame,
-                (text_bg_x1, text_bg_y1),
-                (text_bg_x2, text_bg_y2),
-                self.colors['text_bg'],
-                -1
-            )
-            
-            # Draw main label
+            # Draw main label (no filled background, thin text)
             cv2.putText(
                 annotated_frame,
                 label,
-                (x + 5, y - 5),
+                (x + 3, max(12, y - 6)),
                 self.font,
                 self.font_scale,
                 self.colors['text'],
                 self.font_thickness
             )
             
-            # Draw detection confidence (always display as percentage)
+            # Draw detection confidence (thin, small text)
             if confidence > 0:
                 conf_y = y + h + 20
                 conf_percentage = int(confidence * 100)
                 conf_text = f"Detection: {conf_percentage}%"
-                
-                # Confidence text background
-                (conf_width, conf_height), _ = cv2.getTextSize(
-                    conf_text, self.font, 0.4, 1
-                )
-                
-                cv2.rectangle(
-                    annotated_frame,
-                    (x, conf_y - conf_height - 3),
-                    (x + conf_width + 6, conf_y + 3),
-                    self.colors['text_bg'],
-                    -1
-                )
-                
                 cv2.putText(
                     annotated_frame,
                     conf_text,
-                    (x + 3, conf_y),
+                    (x + 2, conf_y),
                     self.font,
                     0.4,
                     self.colors['text'],
                     1
                 )
             
-            # Draw recognition confidence if available (always display as percentage)
+            # Draw recognition confidence if available (thin)
             if recognition_confidence > 0:
                 rec_conf_y = y + h + (40 if confidence > 0 else 20)
                 rec_conf_percentage = int(recognition_confidence * 100)
                 rec_conf_text = f"Recognition: {rec_conf_percentage}%"
-                
-                # Recognition confidence text background
-                (rec_conf_width, rec_conf_height), _ = cv2.getTextSize(
-                    rec_conf_text, self.font, 0.4, 1
-                )
-                
-                cv2.rectangle(
-                    annotated_frame,
-                    (x, rec_conf_y - rec_conf_height - 3),
-                    (x + rec_conf_width + 6, rec_conf_y + 3),
-                    self.colors['text_bg'],
-                    -1
-                )
-                
                 cv2.putText(
                     annotated_frame,
                     rec_conf_text,
-                    (x + 3, rec_conf_y),
+                    (x + 2, rec_conf_y),
                     self.font,
                     0.4,
                     self.colors['text'],
@@ -207,26 +160,12 @@ class VisualizationService:
             if emotion:
                 emotion_y = y + h + (60 if recognition_confidence > 0 else 40)
                 emotion_text = f"Emotion: {emotion}"
-                
-                # Emotion text background
-                (emotion_width, emotion_height), _ = cv2.getTextSize(
-                    emotion_text, self.font, 0.5, 1
-                )
-                
-                cv2.rectangle(
-                    annotated_frame,
-                    (x, emotion_y - emotion_height - 5),
-                    (x + emotion_width + 10, emotion_y + 5),
-                    self.colors['text_bg'],
-                    -1
-                )
-                
                 cv2.putText(
                     annotated_frame,
                     emotion_text,
-                    (x + 5, emotion_y),
+                    (x + 2, emotion_y),
                     self.font,
-                    0.5,
+                    0.45,
                     self.colors['text'],
                     1
                 )
@@ -236,26 +175,12 @@ class VisualizationService:
                 attention_y = y + h + (80 if emotion else 60)
                 attention_text = "Attentive" if is_attentive else "Not Attentive"
                 attention_color = self.colors['recognized_attentive'] if is_attentive else self.colors['unknown']
-                
-                # Attention text background
-                (attention_width, attention_height), _ = cv2.getTextSize(
-                    attention_text, self.font, 0.5, 1
-                )
-                
-                cv2.rectangle(
-                    annotated_frame,
-                    (x, attention_y - attention_height - 5),
-                    (x + attention_width + 10, attention_y + 5),
-                    self.colors['text_bg'],
-                    -1
-                )
-                
                 cv2.putText(
                     annotated_frame,
                     attention_text,
-                    (x + 5, attention_y),
+                    (x + 2, attention_y),
                     self.font,
-                    0.5,
+                    0.45,
                     attention_color,
                     1
                 )
