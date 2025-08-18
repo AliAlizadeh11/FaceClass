@@ -1,0 +1,364 @@
+Face Detection and Composite Creation Report
+==================================================
+
+Processing Date: 2025-08-18 09:16:47
+Frames Directory: data/frames
+Total Frames Processed: 32
+Total Faces Detected: 53
+Detection Methods Used: Haar Cascade
+
+Frame-by-Frame Analysis:
+------------------------------
+keyframe_00.jpg: 2 faces
+keyframe_01.jpg: 3 faces
+keyframe_02.jpg: 5 faces
+keyframe_03.jpg: 2 faces
+keyframe_04.jpg: 7 faces
+keyframe_05.jpg: 1 faces
+keyframe_06.jpg: 3 faces
+keyframe_07.jpg: 9 faces
+keyframe_08.jpg: 3 faces
+keyframe_09.jpg: 6 faces
+uploaded_frame_000.jpg: 1 faces
+uploaded_frame_001.jpg: 0 faces
+uploaded_frame_002.jpg: 0 faces
+uploaded_frame_003.jpg: 1 faces
+uploaded_frame_004.jpg: 1 faces
+uploaded_frame_005.jpg: 2 faces
+uploaded_frame_006.jpg: 0 faces
+uploaded_frame_060.jpg: 0 faces
+uploaded_frame_120.jpg: 0 faces
+uploaded_frame_180.jpg: 0 faces
+uploaded_frame_240.jpg: 1 faces
+uploaded_frame_300.jpg: 0 faces
+uploaded_frame_360.jpg: 0 faces
+uploaded_frame_420.jpg: 3 faces
+uploaded_frame_480.jpg: 0 faces
+uploaded_frame_540.jpg: 0 faces
+uploaded_frame_600.jpg: 0 faces
+uploaded_frame_660.jpg: 2 faces
+uploaded_frame_720.jpg: 0 faces
+uploaded_frame_780.jpg: 0 faces
+uploaded_frame_840.jpg: 0 faces
+uploaded_frame_900.jpg: 1 faces
+
+Face Details:
+--------------------
+Face 1:
+  Source: keyframe_00.jpg
+  BBox: [np.int32(201), np.int32(437), np.int32(232), np.int32(468)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 2:
+  Source: keyframe_00.jpg
+  BBox: [np.int32(673), np.int32(446), np.int32(707), np.int32(480)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 3:
+  Source: keyframe_01.jpg
+  BBox: [np.int32(520), np.int32(446), np.int32(547), np.int32(473)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 4:
+  Source: keyframe_01.jpg
+  BBox: [np.int32(942), np.int32(448), np.int32(978), np.int32(484)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 5:
+  Source: keyframe_01.jpg
+  BBox: [np.int32(1100), np.int32(446), np.int32(1140), np.int32(486)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 6:
+  Source: keyframe_02.jpg
+  BBox: [np.int32(1098), np.int32(446), np.int32(1138), np.int32(486)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 7:
+  Source: keyframe_02.jpg
+  BBox: [np.int32(929), np.int32(449), np.int32(969), np.int32(489)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 8:
+  Source: keyframe_02.jpg
+  BBox: [np.int32(767), np.int32(469), np.int32(813), np.int32(515)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 9:
+  Source: keyframe_02.jpg
+  BBox: [np.int32(870), np.int32(480), np.int32(914), np.int32(524)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 10:
+  Source: keyframe_02.jpg
+  BBox: [np.int32(556), np.int32(495), np.int32(610), np.int32(549)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 11:
+  Source: keyframe_03.jpg
+  BBox: [np.int32(926), np.int32(445), np.int32(963), np.int32(482)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 12:
+  Source: keyframe_03.jpg
+  BBox: [np.int32(873), np.int32(482), np.int32(919), np.int32(528)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 13:
+  Source: keyframe_04.jpg
+  BBox: [np.int32(731), np.int32(431), np.int32(756), np.int32(456)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 14:
+  Source: keyframe_04.jpg
+  BBox: [np.int32(844), np.int32(443), np.int32(873), np.int32(472)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 15:
+  Source: keyframe_04.jpg
+  BBox: [np.int32(284), np.int32(438), np.int32(320), np.int32(474)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 16:
+  Source: keyframe_04.jpg
+  BBox: [np.int32(931), np.int32(454), np.int32(964), np.int32(487)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 17:
+  Source: keyframe_04.jpg
+  BBox: [np.int32(766), np.int32(465), np.int32(812), np.int32(511)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 18:
+  Source: keyframe_04.jpg
+  BBox: [np.int32(873), np.int32(485), np.int32(917), np.int32(529)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 19:
+  Source: keyframe_04.jpg
+  BBox: [np.int32(1087), np.int32(446), np.int32(1127), np.int32(486)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 20:
+  Source: keyframe_05.jpg
+  BBox: [np.int32(958), np.int32(447), np.int32(1000), np.int32(489)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 21:
+  Source: keyframe_06.jpg
+  BBox: [np.int32(896), np.int32(430), np.int32(925), np.int32(459)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 22:
+  Source: keyframe_06.jpg
+  BBox: [np.int32(734), np.int32(432), np.int32(763), np.int32(461)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 23:
+  Source: keyframe_06.jpg
+  BBox: [np.int32(958), np.int32(444), np.int32(993), np.int32(479)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 24:
+  Source: keyframe_07.jpg
+  BBox: [np.int32(442), np.int32(421), np.int32(467), np.int32(446)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 25:
+  Source: keyframe_07.jpg
+  BBox: [np.int32(829), np.int32(452), np.int32(857), np.int32(480)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 26:
+  Source: keyframe_07.jpg
+  BBox: [np.int32(666), np.int32(456), np.int32(699), np.int32(489)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 27:
+  Source: keyframe_07.jpg
+  BBox: [np.int32(953), np.int32(444), np.int32(988), np.int32(479)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 28:
+  Source: keyframe_07.jpg
+  BBox: [np.int32(1100), np.int32(445), np.int32(1143), np.int32(488)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 29:
+  Source: keyframe_07.jpg
+  BBox: [np.int32(766), np.int32(462), np.int32(806), np.int32(502)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 30:
+  Source: keyframe_07.jpg
+  BBox: [np.int32(869), np.int32(477), np.int32(914), np.int32(522)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 31:
+  Source: keyframe_07.jpg
+  BBox: [np.int32(1063), np.int32(623), np.int32(1132), np.int32(692)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 32:
+  Source: keyframe_07.jpg
+  BBox: [np.int32(572), np.int32(493), np.int32(627), np.int32(548)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 33:
+  Source: keyframe_08.jpg
+  BBox: [np.int32(837), np.int32(417), np.int32(863), np.int32(443)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 34:
+  Source: keyframe_08.jpg
+  BBox: [np.int32(854), np.int32(446), np.int32(881), np.int32(473)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 35:
+  Source: keyframe_08.jpg
+  BBox: [np.int32(918), np.int32(450), np.int32(968), np.int32(500)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 36:
+  Source: keyframe_09.jpg
+  BBox: [np.int32(925), np.int32(435), np.int32(962), np.int32(472)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 37:
+  Source: keyframe_09.jpg
+  BBox: [np.int32(881), np.int32(484), np.int32(921), np.int32(524)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 38:
+  Source: keyframe_09.jpg
+  BBox: [np.int32(767), np.int32(468), np.int32(810), np.int32(511)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 39:
+  Source: keyframe_09.jpg
+  BBox: [np.int32(1107), np.int32(450), np.int32(1150), np.int32(493)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 40:
+  Source: keyframe_09.jpg
+  BBox: [np.int32(463), np.int32(473), np.int32(514), np.int32(524)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 41:
+  Source: keyframe_09.jpg
+  BBox: [np.int32(1017), np.int32(533), np.int32(1083), np.int32(599)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 42:
+  Source: uploaded_frame_000.jpg
+  BBox: [np.int32(481), np.int32(293), np.int32(507), np.int32(319)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 43:
+  Source: uploaded_frame_003.jpg
+  BBox: [np.int32(498), np.int32(307), np.int32(528), np.int32(337)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 44:
+  Source: uploaded_frame_004.jpg
+  BBox: [np.int32(729), np.int32(298), np.int32(758), np.int32(327)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 45:
+  Source: uploaded_frame_005.jpg
+  BBox: [np.int32(632), np.int32(299), np.int32(658), np.int32(325)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 46:
+  Source: uploaded_frame_005.jpg
+  BBox: [np.int32(732), np.int32(299), np.int32(758), np.int32(325)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 47:
+  Source: uploaded_frame_240.jpg
+  BBox: [np.int32(594), np.int32(279), np.int32(621), np.int32(306)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 48:
+  Source: uploaded_frame_420.jpg
+  BBox: [np.int32(471), np.int32(287), np.int32(498), np.int32(314)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 49:
+  Source: uploaded_frame_420.jpg
+  BBox: [np.int32(598), np.int32(277), np.int32(624), np.int32(303)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 50:
+  Source: uploaded_frame_420.jpg
+  BBox: [np.int32(527), np.int32(361), np.int32(584), np.int32(418)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 51:
+  Source: uploaded_frame_660.jpg
+  BBox: [np.int32(686), np.int32(279), np.int32(713), np.int32(306)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 52:
+  Source: uploaded_frame_660.jpg
+  BBox: [np.int32(547), np.int32(336), np.int32(605), np.int32(394)]
+  Confidence: 0.800
+  Method: Haar Cascade
+
+Face 53:
+  Source: uploaded_frame_900.jpg
+  BBox: [np.int32(686), np.int32(279), np.int32(713), np.int32(306)]
+  Confidence: 0.800
+  Method: Haar Cascade
+

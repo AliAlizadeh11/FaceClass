@@ -1,0 +1,95 @@
+Enhanced Face Detection Report
+========================================
+
+Processing Date: 2025-08-18 09:22:36
+Total Frames Processed: 32
+Total Faces Detected: 147
+Detection Methods: Haar Cascade
+
+Frame Analysis:
+--------------------
+keyframe_00.jpg: 4 faces
+keyframe_01.jpg: 7 faces
+keyframe_02.jpg: 8 faces
+keyframe_03.jpg: 6 faces
+keyframe_04.jpg: 12 faces
+keyframe_05.jpg: 6 faces
+keyframe_06.jpg: 10 faces
+keyframe_07.jpg: 11 faces
+keyframe_08.jpg: 4 faces
+keyframe_09.jpg: 9 faces
+uploaded_frame_000.jpg: 4 faces
+uploaded_frame_001.jpg: 3 faces
+uploaded_frame_002.jpg: 4 faces
+uploaded_frame_003.jpg: 3 faces
+uploaded_frame_004.jpg: 5 faces
+uploaded_frame_005.jpg: 5 faces
+uploaded_frame_006.jpg: 5 faces
+uploaded_frame_060.jpg: 3 faces
+uploaded_frame_120.jpg: 2 faces
+uploaded_frame_180.jpg: 2 faces
+uploaded_frame_240.jpg: 5 faces
+uploaded_frame_300.jpg: 3 faces
+uploaded_frame_360.jpg: 4 faces
+uploaded_frame_420.jpg: 7 faces
+uploaded_frame_480.jpg: 1 faces
+uploaded_frame_540.jpg: 0 faces
+uploaded_frame_600.jpg: 1 faces
+uploaded_frame_660.jpg: 4 faces
+uploaded_frame_720.jpg: 3 faces
+uploaded_frame_780.jpg: 2 faces
+uploaded_frame_840.jpg: 1 faces
+uploaded_frame_900.jpg: 3 faces
+
+Top Quality Faces:
+--------------------
+Face 1:
+  Source: keyframe_06.jpg
+  Quality Score: 1.000
+  Method: Haar Cascade
+
+Face 2:
+  Source: uploaded_frame_005.jpg
+  Quality Score: 0.953
+  Method: Haar Cascade
+
+Face 3:
+  Source: uploaded_frame_004.jpg
+  Quality Score: 0.939
+  Method: Haar Cascade
+
+Face 4:
+  Source: uploaded_frame_660.jpg
+  Quality Score: 0.939
+  Method: Haar Cascade
+
+Face 5:
+  Source: uploaded_frame_006.jpg
+  Quality Score: 0.924
+  Method: Haar Cascade
+
+Face 6:
+  Source: keyframe_04.jpg
+  Quality Score: 0.922
+  Method: Haar Cascade
+
+Face 7:
+  Source: keyframe_09.jpg
+  Quality Score: 0.893
+  Method: Haar Cascade
+
+Face 8:
+  Source: keyframe_04.jpg
+  Quality Score: 0.785
+  Method: Haar Cascade
+
+Face 9:
+  Source: keyframe_00.jpg
+  Quality Score: 0.782
+  Method: Haar Cascade
+
+Face 10:
+  Source: keyframe_07.jpg
+  Quality Score: 0.752
+  Method: Haar Cascade
+
