@@ -955,11 +955,12 @@ def process_video_frames():
                         if not sid:
                             sid = "ID_UNK"
                         det['student_id'] = sid
-                        # Draw ID label (thin, modern style above bbox)
+                        # Draw minimal ID label above bbox
                         x1, y1, x2, y2 = det['bbox']
+                        label_text = f"ID: {sid}"
                         cv2.putText(
                             annotated_frame,
-                            sid,
+                            label_text,
                             (x1 + 2, max(12, y1 - 6)),
                             cv2.FONT_HERSHEY_SIMPLEX,
                             0.45,
@@ -1328,12 +1329,8 @@ def detect_faces_in_frame(frame):
     annotated_frame = frame.copy()
     for face in final_faces:
         x1, y1, x2, y2 = face['bbox']
-        # Thin rectangle and thin label text for subtle styling
+        # Thin rectangle only; no debug text or method labels
         cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 220, 0), 1)
-        cv2.putText(annotated_frame, f"Face {face['face_id']} ({face.get('confidence', 0):.2f})",
-                    (x1 + 2, max(12, y1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 220, 0), 1)
-        cv2.putText(annotated_frame, face.get('method', 'N/A'),
-                    (x1 + 2, min(annotated_frame.shape[0] - 5, y2 + 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (180, 120, 50), 1)
 
     detection_method = f"Combined: {', '.join(sorted(set(detection_methods_used)))}" if detection_methods_used else "Fallback: Haar"
     return annotated_frame, final_faces, detection_method

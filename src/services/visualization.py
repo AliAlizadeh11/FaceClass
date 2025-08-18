@@ -109,11 +109,9 @@ class VisualizationService:
                 1
             )
             
-            # Prepare label text (draw above bbox to avoid covering the face)
-            if student_id != 'unknown':
-                label = f"Name: {student_id}"
-            else:
-                label = f"ID: {track_id}"
+            # Prepare minimal label text (always ID-style)
+            label_value = student_id if (student_id and student_id != 'unknown') else track_id
+            label = f"ID: {label_value}"
             
             # Draw main label (no filled background, thin text)
             cv2.putText(
