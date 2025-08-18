@@ -318,6 +318,30 @@
                 gap: 20px;
             }
         }
+
+        /* Annotated preview styling */
+        .annotated-preview {
+            margin-top: 25px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+        .annotated-preview h5 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.05rem;
+            text-align: center;
+        }
+        .annotated-preview .preview-wrapper{
+            text-align: center;
+        }
+        .annotated-preview img{
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        }
     </style>
 </head>
 <body>
@@ -400,6 +424,14 @@
                         All detected faces merged into a single composite image
                     </p>
                     
+                    <!-- Annotated classroom preview with bounding boxes and IDs -->
+                    <div class="annotated-preview mb-4">
+                        <h5><i class="fas fa-chalkboard"></i> Classroom Frame (Bounding Boxes with IDs)</h5>
+                        <div class="preview-wrapper">
+                            <img id="annotatedPreview" src="" alt="Annotated Classroom Preview">
+                        </div>
+                    </div>
+
                     <div class="composite-container">
                         <div class="composite-image-wrapper">
                             <img id="compositeImage" src="" alt="Face Detection Composite" class="composite-image">
@@ -679,6 +711,16 @@
                 
                 // Display composite result
                 this.displayCompositeResult(data);
+
+                // Also set an annotated preview image (pick the densest frame)
+                const annotatedPreview = document.getElementById('annotatedPreview');
+                if (annotatedPreview && data.processed_frames && data.processed_frames.length) {
+                    const densest = [...data.processed_frames].sort((a, b) => (b.faces_detected || 0) - (a.faces_detected || 0))[0];
+                    if (densest && densest.annotated_frame) {
+                        annotatedPreview.src = densest.annotated_frame;
+                        annotatedPreview.alt = `Frame ${densest.frame_number} - ${densest.faces_detected} faces`;
+                    }
+                }
             }
             
             displayCompositeResult(data) {
@@ -726,21 +768,121 @@
                 this.bindDownloadEvents(data);
             }
             
-            generateCompositeImage(frames) {
-                // For now, we'll use a placeholder or the first frame with faces
-                // In a real implementation, this would call the backend to generate the composite
+            async generateCompositeImage(frames) {
+                // Build a composite by cropping all detected faces from their frames
                 const compositeImage = document.getElementById('compositeImage');
-                if (compositeImage) {
-                    // Find a frame with faces to show as preview
-                    const frameWithFaces = frames.find(frame => frame.faces_detected > 0);
-                    if (frameWithFaces) {
-                        compositeImage.src = frameWithFaces.annotated_frame;
-                        compositeImage.alt = `Face Detection Preview - ${frameWithFaces.faces_detected} faces detected`;
-                    } else {
+                if (!frames || frames.length === 0) {
+                    if (compositeImage) {
+                        compositeImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk1YTBhYiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIGZyYW1lcyBhdmFpbGFibGU8L3RleHQ+PC9zdmc+';
+                        compositeImage.alt = 'No frames available';
+                    }
+                    return;
+                }
+
+                // Collect all face crops descriptors (image src + bbox)
+                const faceItems = [];
+                for (const frame of frames) {
+                    if (frame.faces_detected > 0 && frame.face_detections && frame.face_detections.length) {
+                        for (const face of frame.face_detections) {
+                            const [x1, y1, x2, y2] = face.bbox || [];
+                            if (typeof x1 === 'number' && typeof y1 === 'number' && typeof x2 === 'number' && typeof y2 === 'number') {
+                                // Slightly shrink the crop to avoid any border overlays
+                                const shrink = 2;
+                                faceItems.push({
+                                    src: frame.annotated_frame,
+                                    crop: { x: Math.max(0, x1 + shrink), y: Math.max(0, y1 + shrink), w: Math.max(1, x2 - x1 - 2 * shrink), h: Math.max(1, y2 - y1 - 2 * shrink) }
+                                });
+                            }
+                        }
+                    }
+                }
+
+                if (faceItems.length === 0) {
+                    if (compositeImage) {
                         compositeImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjhmOWZhIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk1YTBhYiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIGZhY2VzIGRldGVjdGVkPC90ZXh0Pjwvc3ZnPg==';
                         compositeImage.alt = 'No faces detected';
                     }
+                    return;
                 }
+
+                // Helper to load an image
+                const loadImage = (src) => new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = src;
+                });
+
+                // Load unique frame images once
+                const cache = new Map();
+                const getImage = async (src) => {
+                    if (cache.has(src)) return cache.get(src);
+                    const img = await loadImage(src);
+                    cache.set(src, img);
+                    return img;
+                };
+
+                // Determine grid sizing
+                const thumbW = 160;
+                const thumbH = 160;
+                const spacing = 8;
+                const total = faceItems.length;
+                const maxCols = 8;
+                const cols = Math.min(maxCols, Math.ceil(Math.sqrt(total)));
+                const rows = Math.ceil(total / cols);
+                const canvasW = cols * thumbW + (cols - 1) * spacing;
+                const canvasH = rows * thumbH + (rows - 1) * spacing;
+
+                // Create canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = canvasW;
+                canvas.height = canvasH;
+                const ctx = canvas.getContext('2d');
+                // White background for reliable PNG/JPEG export across browsers
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvasW, canvasH);
+
+                // Draw each face crop into grid
+                for (let i = 0; i < total; i++) {
+                    const col = i % cols;
+                    const row = Math.floor(i / cols);
+                    const dx = col * (thumbW + spacing);
+                    const dy = row * (thumbH + spacing);
+
+                    const item = faceItems[i];
+                    try {
+                        const img = await getImage(item.src);
+                        const { x, y, w, h } = item.crop;
+                        // Guard source rects
+                        const sx = Math.max(0, Math.min(x, img.width - 1));
+                        const sy = Math.max(0, Math.min(y, img.height - 1));
+                        const sw = Math.max(1, Math.min(w, img.width - sx));
+                        const sh = Math.max(1, Math.min(h, img.height - sy));
+                        ctx.drawImage(img, sx, sy, sw, sh, dx, dy, thumbW, thumbH);
+                    } catch (e) {
+                        // Skip failed images but keep grid alignment
+                        ctx.fillStyle = '#eeeeee';
+                        ctx.fillRect(dx, dy, thumbW, thumbH);
+                    }
+                }
+
+                // Update preview image
+                if (compositeImage) {
+                    compositeImage.src = canvas.toDataURL('image/png');
+                    compositeImage.alt = `Composite of ${total} faces`;
+                }
+
+                // Prepare a Blob for download
+                this._compositeBlobURL && URL.revokeObjectURL(this._compositeBlobURL);
+                await new Promise((resolve) => {
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            this._compositeBlob = blob;
+                            this._compositeBlobURL = URL.createObjectURL(blob);
+                        }
+                        resolve();
+                    }, 'image/png');
+                });
             }
             
             bindDownloadEvents(data) {
@@ -749,8 +891,29 @@
                 
                 if (downloadComposite) {
                     downloadComposite.addEventListener('click', () => {
-                        // In a real implementation, this would download the generated composite
-                        alert('Composite download feature will be implemented with backend integration');
+                        // Trigger download of the generated composite image
+                        const filename = `composite_results_${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
+                        if (this._compositeBlobURL) {
+                            const a = document.createElement('a');
+                            a.href = this._compositeBlobURL;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                        } else {
+                            // Fallback to data URL from preview image
+                            const compositeImage = document.getElementById('compositeImage');
+                            if (compositeImage && compositeImage.src) {
+                                const a = document.createElement('a');
+                                a.href = compositeImage.src;
+                                a.download = filename;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                            } else {
+                                alert('Composite not ready yet. Please wait a moment and try again.');
+                            }
+                        }
                     });
                 }
                 
