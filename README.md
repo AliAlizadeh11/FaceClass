@@ -135,6 +135,17 @@ FaceClass/
    python scripts/download_models.py
    ```
 
+4. **Setup YOLOv8 Face Detection (Optional but Recommended)**
+   ```bash
+   # Test basic YOLOv8 functionality
+   python test_yolov8_simple.py
+   
+   # Run comprehensive debug script
+   python debug_yolov8_face_detection.py
+   
+   # For detailed setup instructions, see: YOLOV8_FACE_DETECTION_SETUP.md
+   ```
+
 4. **Configure the system**
    ```bash
    # Edit config.yaml for your specific needs
