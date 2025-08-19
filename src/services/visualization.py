@@ -34,10 +34,10 @@ class VisualizationService:
             'text_bg': (0, 0, 0)                     # Black
         }
         
-        # Font settings
+        # Font settings (thin, modern style)
         self.font = cv2.FONT_HERSHEY_SIMPLEX
-        self.font_scale = 0.6
-        self.font_thickness = 2
+        self.font_scale = 0.5
+        self.font_thickness = 1
         self.text_thickness = 1
         
         # Create output directories
@@ -100,13 +100,13 @@ class VisualizationService:
             else:
                 color = self.colors['unknown']  # Red
             
-            # Draw bounding box
+            # Draw bounding box (thin stroke)
             cv2.rectangle(
                 annotated_frame, 
                 (x, y), 
                 (x + w, y + h), 
                 color, 
-                3
+                1
             )
             
             # Prepare label text
@@ -142,7 +142,8 @@ class VisualizationService:
                 self.font,
                 self.font_scale,
                 self.colors['text'],
-                self.font_thickness
+                self.font_thickness,
+                cv2.LINE_AA
             )
             
             # Draw detection confidence (always display as percentage)
@@ -171,7 +172,8 @@ class VisualizationService:
                     self.font,
                     0.4,
                     self.colors['text'],
-                    1
+                    1,
+                    cv2.LINE_AA
                 )
             
             # Draw recognition confidence if available (always display as percentage)
@@ -200,7 +202,8 @@ class VisualizationService:
                     self.font,
                     0.4,
                     self.colors['text'],
-                    1
+                    1,
+                    cv2.LINE_AA
                 )
             
             # Draw emotion if available
@@ -228,7 +231,8 @@ class VisualizationService:
                     self.font,
                     0.5,
                     self.colors['text'],
-                    1
+                    1,
+                    cv2.LINE_AA
                 )
             
             # Draw attention status if available
@@ -257,7 +261,8 @@ class VisualizationService:
                     self.font,
                     0.5,
                     attention_color,
-                    1
+                    1,
+                    cv2.LINE_AA
                 )
         
         return annotated_frame
@@ -439,8 +444,8 @@ class VisualizationService:
                 # Place thumbnail in grid
                 grid[y1:y2, x1:x2] = img_resized
                 
-                # Add border
-                cv2.rectangle(grid, (x1, y1), (x2, y2), (0, 0, 0), 2)
+                # Add border (thin)
+                cv2.rectangle(grid, (x1, y1), (x2, y2), (0, 0, 0), 1)
             
             # Save grid
             success = cv2.imwrite(output_path, grid)

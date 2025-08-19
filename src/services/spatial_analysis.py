@@ -42,8 +42,8 @@ def render_movement_paths(
         color = color_for(sid)
         for i in range(1, len(pts)):
             cv2.line(canvas, pts[i-1], pts[i], color, 2)
-        # label last position
-        cv2.putText(canvas, sid, pts[-1], cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+        # label last position (thin, anti-aliased)
+        cv2.putText(canvas, sid, pts[-1], cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
     return canvas
 
 
@@ -62,7 +62,7 @@ def render_seat_map(
         cx = xs[len(xs)//2]
         cy = ys[len(ys)//2]
         cv2.circle(canvas, (cx, cy), 10, (0, 128, 255), thickness=-1)
-        cv2.putText(canvas, sid, (cx+12, cy-12), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+        cv2.putText(canvas, sid, (cx+12, cy-12), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
     return canvas
 
 

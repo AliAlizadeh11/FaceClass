@@ -1790,10 +1790,10 @@ class DashboardUI:
                             'top': f'{rel_y1}px',
                             'width': f'{rel_x2 - rel_x1}px',
                             'height': f'{rel_y2 - rel_y1}px',
-                            'border': f'3px solid {color}',
-                            'borderRadius': '4px',
-                            'boxShadow': '0 0 10px rgba(0,0,0,0.3)',
-                            'backgroundColor': f'{color}20'  # Semi-transparent background
+                            'border': f'1px solid {color}',
+                            'borderRadius': '2px',
+                            'boxShadow': 'none',
+                            'backgroundColor': 'transparent'
                         }),
                         # Attention score and identity indicator
                         html.Div([
@@ -1803,12 +1803,15 @@ class DashboardUI:
                                 'top': f'{rel_y1 - 35}px',
                                 'backgroundColor': color,
                                 'color': 'white',
-                                'padding': '4px 8px',
-                                'borderRadius': '4px',
+                                'padding': '2px 6px',
+                                'borderRadius': '2px',
                                 'fontSize': '11px',
-                                'fontWeight': 'bold',
+                                'fontWeight': '400',
                                 'minWidth': '80px',
-                                'textAlign': 'center'
+                                'textAlign': 'center',
+                                'border': f'1px solid {color}',
+                                'backgroundColor': 'white',
+                                'color': '#2c3e50'
                             }, children=f"{identity}: {attention_score:.2f}")
                         ]),
                         # Emotion indicator
@@ -1817,12 +1820,13 @@ class DashboardUI:
                                 'position': 'absolute',
                                 'left': f'{rel_x1}px',
                                 'top': f'{rel_y2 + 5}px',
-                                'backgroundColor': '#34495e',
-                                'color': 'white',
+                                'backgroundColor': 'white',
+                                'color': '#2c3e50',
                                 'padding': '2px 6px',
-                                'borderRadius': '3px',
+                                'borderRadius': '2px',
                                 'fontSize': '10px',
-                                'fontWeight': 'bold'
+                                'fontWeight': '400',
+                                'border': '1px solid #bdc3c7'
                             }, children=f"😊 {emotion.title()}")
                         ])
                     ])

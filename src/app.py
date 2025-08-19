@@ -910,7 +910,7 @@ def process_video_frames():
                         det['student_id'] = sid
                         # Draw ID label
                         x1, y1, x2, y2 = det['bbox']
-                        cv2.putText(annotated_frame, sid, (x1, max(0, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                        cv2.putText(annotated_frame, sid, (x1, max(0, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (30, 30, 30), 1, cv2.LINE_AA)
 
                         # Attendance: mark presence (count frames)
                         attendance_manager.add_presence('session_default', sid, frames=1)
@@ -1272,11 +1272,13 @@ def detect_faces_in_frame(frame):
     annotated_frame = frame.copy()
     for face in final_faces:
         x1, y1, x2, y2 = face['bbox']
-        cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        # Thin bounding box
+        cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 1)
+        # Thin, readable labels
         cv2.putText(annotated_frame, f"Face {face['face_id']} ({face.get('confidence', 0):.2f})",
-                    (x1, max(0, y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                    (x1, max(0, y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1, cv2.LINE_AA)
         cv2.putText(annotated_frame, face.get('method', 'N/A'),
-                    (x1, min(annotated_frame.shape[0] - 5, y2 + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1)
+                    (x1, min(annotated_frame.shape[0] - 5, y2 + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (60, 60, 60), 1, cv2.LINE_AA)
 
     detection_method = f"Combined: {', '.join(sorted(set(detection_methods_used)))}" if detection_methods_used else "Fallback: Haar"
     return annotated_frame, final_faces, detection_method

@@ -48,7 +48,7 @@ def create_annotated_frame(num_students, frame_id):
     
     # Add frame info
     cv2.rectangle(frame, (20, 20), (780, 60), (50, 50, 50), -1)
-    cv2.rectangle(frame, (20, 20), (780, 60), (255, 255, 255), 2)
+    cv2.rectangle(frame, (20, 20), (780, 60), (255, 255, 255), 1)
     cv2.putText(frame, f"Frame {frame_id:04d} - FaceClass Analysis", (40, 45), 
                 cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
     
@@ -103,7 +103,7 @@ def create_annotated_frame(num_students, frame_id):
             box_color = (0, 0, 255)  # Red
             status = "Unknown"
         
-        cv2.rectangle(frame, (bbox_x1, bbox_y1), (bbox_x2, bbox_y2), box_color, 3)
+        cv2.rectangle(frame, (bbox_x1, bbox_y1), (bbox_x2, bbox_y2), box_color, 1)
         
         # Labels
         label_y = bbox_y1 - 10
@@ -112,28 +112,28 @@ def create_annotated_frame(num_students, frame_id):
         
         # Student name and track ID
         cv2.rectangle(frame, (bbox_x1, label_y - 20), (bbox_x1 + 200, label_y + 5), (0, 0, 0), -1)
-        cv2.rectangle(frame, (bbox_x1, label_y - 20), (bbox_x1 + 200, label_y + 5), box_color, 2)
+        cv2.rectangle(frame, (bbox_x1, label_y - 20), (bbox_x1 + 200, label_y + 5), box_color, 1)
         cv2.putText(frame, f"Name: {student_name}", (bbox_x1 + 5, label_y - 5), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
         # Track ID
         track_label_y = label_y + 20
         cv2.rectangle(frame, (bbox_x1, track_label_y - 20), (bbox_x1 + 200, track_label_y + 5), (0, 0, 0), -1)
-        cv2.rectangle(frame, (bbox_x1, track_label_y - 20), (bbox_x1 + 200, track_label_y + 5), box_color, 2)
+        cv2.rectangle(frame, (bbox_x1, track_label_y - 20), (bbox_x1 + 200, track_label_y + 5), box_color, 1)
         cv2.putText(frame, f"Track ID: {i+1}", (bbox_x1 + 5, track_label_y - 5), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
         # Confidence scores
         conf_label_y = track_label_y + 20
         cv2.rectangle(frame, (bbox_x1, conf_label_y - 20), (bbox_x1 + 200, conf_label_y + 5), (0, 0, 0), -1)
-        cv2.rectangle(frame, (bbox_x1, conf_label_y - 20), (bbox_x1 + 200, conf_label_y + 5), box_color, 2)
+        cv2.rectangle(frame, (bbox_x1, conf_label_y - 20), (bbox_x1 + 200, conf_label_y + 5), box_color, 1)
         cv2.putText(frame, f"Detection: 95%", (bbox_x1 + 5, conf_label_y - 5), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
         # Recognition confidence
         rec_conf_label_y = conf_label_y + 20
         cv2.rectangle(frame, (bbox_x1, rec_conf_label_y - 20), (bbox_x1 + 200, rec_conf_label_y + 5), (0, 0, 0), -1)
-        cv2.rectangle(frame, (bbox_x1, rec_conf_label_y - 20), (bbox_x1 + 200, rec_conf_label_y + 5), box_color, 2)
+        cv2.rectangle(frame, (bbox_x1, rec_conf_label_y - 20), (bbox_x1 + 200, rec_conf_label_y + 5), box_color, 1)
         
         if i < 4:  # Recognized students
             rec_conf = 95 - (i * 2)  # Varying confidence
@@ -146,14 +146,14 @@ def create_annotated_frame(num_students, frame_id):
         # Status
         status_label_y = rec_conf_label_y + 20
         cv2.rectangle(frame, (bbox_x1, status_label_y - 20), (bbox_x1 + 200, status_label_y + 5), (0, 0, 0), -1)
-        cv2.rectangle(frame, (bbox_x1, status_label_y - 20), (bbox_x1 + 200, status_label_y + 5), box_color, 2)
+        cv2.rectangle(frame, (bbox_x1, status_label_y - 20), (bbox_x1 + 200, status_label_y + 5), box_color, 1)
         cv2.putText(frame, f"Status: {status}", (bbox_x1 + 5, status_label_y - 5), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
     
     # Add legend
     legend_y = 500
     cv2.rectangle(frame, (20, legend_y), (780, legend_y + 80), (240, 240, 240), -1)
-    cv2.rectangle(frame, (20, legend_y), (780, legend_y + 80), (100, 100, 100), 2)
+    cv2.rectangle(frame, (20, legend_y), (780, legend_y + 80), (100, 100, 100), 1)
     
     cv2.putText(frame, "Legend:", (40, legend_y + 20), 
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
