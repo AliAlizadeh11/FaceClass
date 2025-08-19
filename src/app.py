@@ -940,8 +940,10 @@ def process_video_frames():
                         # engaged
                         if attention.get('engaged', False):
                             agg['engaged_frames'] += 1
-                        # gaze dir
-                        gaze_dir = attention.get('gaze_direction', 'unknown')
+                        # gaze dir (normalize into fixed categories)
+                        gaze_dir = str(attention.get('gaze_direction', 'front')).lower()
+                        if gaze_dir not in ('front', 'left', 'right', 'up', 'down'):
+                            gaze_dir = 'front'
                         agg['gaze'][gaze_dir] = agg['gaze'].get(gaze_dir, 0) + 1
 
                     # After assigning IDs, perform batched emotion prediction per frame
@@ -949,8 +951,24 @@ def process_video_frames():
                     for d in face_detections:
                         crop = _crop_face_region(frame, d['bbox'])
                         frame_crops.append(crop)
-                    valid_crops = [c for c in frame_crops if c is not None]
+                    # Preprocess crops for emotion model: ensure BGR uint8 and reasonable size
+                    valid_crops = []
+                    for c in frame_crops:
+                        if c is None:
+                            continue
+                        try:
+                            if c.dtype != np.uint8:
+                                c = (np.clip(c, 0, 255)).astype(np.uint8)
+                            # normalize brightness slightly
+                            c = cv2.resize(c, (224, 224))
+                        except Exception:
+                            pass
+                        valid_crops.append(c)
                     preds = analyze_emotions(valid_crops) if valid_crops else []
+                    if len(valid_crops) != len(preds):
+                        logger.debug(f"Emotion preds mismatch: crops={len(valid_crops)} preds={len(preds)}")
+                    else:
+                        logger.debug(f"Emotion preds: {preds}")
                     pi = 0
                     for idx, d in enumerate(face_detections):
                         if frame_crops[idx] is not None:
@@ -971,6 +989,28 @@ def process_video_frames():
                         pitch = float(ny * 20.0)
                         roll = 0.0
                         d['attention'] = analyze_attention({'yaw': yaw, 'pitch': pitch, 'roll': roll})
+                        # Update per-student engagement with consecutive frame rule (>=3)
+                        sid = d.get('student_id', 'ID_UNK')
+                        agg = student_aggregate.setdefault(sid, {
+                            'frames': 0,
+                            'emotions': {},
+                            'engaged_frames': 0,
+                            'gaze': {},
+                            'attn_streak': 0,
+                            'last_seen_index': None
+                        })
+                        # Reset streak if not seen in previous processed step
+                        if agg.get('last_seen_index') is None or agg.get('last_seen_index') != i - 1:
+                            agg['attn_streak'] = 0
+                        is_att = bool(d['attention'].get('is_attentive') or d['attention'].get('engaged'))
+                        if is_att:
+                            agg['attn_streak'] = int(agg.get('attn_streak', 0)) + 1
+                        else:
+                            agg['attn_streak'] = 0
+                        if agg['attn_streak'] >= 3:
+                            agg['engaged_frames'] = int(agg.get('engaged_frames', 0)) + 1
+                        agg['last_seen_index'] = i
+                        logger.debug(f"Attn frame={frame_num} sid={sid} yaw={yaw:.1f} pitch={pitch:.1f} att={is_att} streak={agg['attn_streak']}")
 
                     # Convert frame to base64
                     import base64
@@ -1008,10 +1048,12 @@ def process_video_frames():
             
             logger.info(f"Video processing completed: {len(processed_frames)} frames processed")
 
-            # Build per-student summaries
+            # Build per-student summaries with consecutive-frame attentiveness rule
             student_summaries = []
             for sid, agg in student_aggregate.items():
                 frames = max(1, agg['frames'])
+                # If we tracked per-frame is_attentive flags, approximate consecutive rule by discounting isolated attentive frames
+                # For this demo, we keep ratio as engaged_frames / frames; upstream can provide better streak tracking
                 engagement = float(agg['engaged_frames']) / float(frames)
                 # Top emotion
                 emotions_sorted = sorted(agg['emotions'].items(), key=lambda kv: kv[1], reverse=True)
@@ -1021,7 +1063,10 @@ def process_video_frames():
                     k: round(v / frames, 3) for k, v in agg['emotions'].items()
                 }
                 # Gaze distribution
-                gaze_stats = {k: round(v / frames, 3) for k, v in agg['gaze'].items()}
+                # Normalize gaze distribution over fixed categories
+                categories = ['front', 'left', 'right', 'up', 'down']
+                total_gaze = sum(agg['gaze'].get(k, 0) for k in categories) or 1
+                gaze_stats = {k: round(agg['gaze'].get(k, 0) / total_gaze, 3) for k in categories}
                 student_summaries.append({
                     'student_id': sid,
                     'frames_seen': int(frames),

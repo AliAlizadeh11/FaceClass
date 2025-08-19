@@ -744,7 +744,19 @@
                                     <small>Frames: ${s.frames_seen} • Engagement: ${(s.engagement_ratio*100).toFixed(0)}%</small>
                                 </div>
                                 <p class=\"mb-1\">Top Emotion: <strong>${s.top_emotion}</strong></p>
-                                <small>Emotions: ${JSON.stringify(s.emotion_distribution)} | Gaze: ${JSON.stringify(s.gaze_distribution)}</small>
+                                <small>
+                                    Emotions: ${JSON.stringify(s.emotion_distribution)} |
+                                    Gaze: Looking <strong>${(function() {
+                                        const g = s.gaze_distribution || {};
+                                        const entries = Object.entries(g);
+                                        if (!entries.length) return 'Front';
+                                        entries.sort((a,b)=>b[1]-a[1]);
+                                        const best = entries[0][0];
+                                        const map = {front:'Front',left:'Left',right:'Right',up:'Up',down:'Down'};
+                                        return map[best] || 'Front';
+                                    })()}</strong> |
+                                    GazeDist: ${JSON.stringify(s.gaze_distribution)}
+                                </small>
                             `;
                             team2ResultsList.appendChild(item);
                         });

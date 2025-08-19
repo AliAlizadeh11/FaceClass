@@ -13,6 +13,7 @@ Attention rule:
 """
 
 from typing import Any, Dict
+import math
 
 
 def analyze_attention(face_landmarks: Any) -> Dict:
@@ -25,12 +26,35 @@ def analyze_attention(face_landmarks: Any) -> Dict:
         roll = float(face_landmarks.get('roll', 0.0))
     except Exception:
         yaw, pitch, roll = 0.0, 0.0, 0.0
-    is_attentive = (abs(yaw) <= 25.0) and (abs(pitch) <= 20.0)
+    # Normalize/clip extreme angles and smooth minor noise
+    yaw = float(max(-90.0, min(90.0, yaw)))
+    pitch = float(max(-90.0, min(90.0, pitch)))
+    roll = float(max(-90.0, min(90.0, roll)))
+    if abs(yaw) < 2.0:
+        yaw = 0.0
+    if abs(pitch) < 2.0:
+        pitch = 0.0
+    # Simple gaze direction heuristic from yaw/pitch
+    # Categories: front, left, right, up, down
+    if pitch >= 12.0:
+        gaze_direction = 'down'
+    elif pitch <= -12.0:
+        gaze_direction = 'up'
+    elif yaw <= -10.0:
+        gaze_direction = 'left'
+    elif yaw >= 10.0:
+        gaze_direction = 'right'
+    else:
+        gaze_direction = 'front'
+    # Per-frame attentiveness; consecutive-frame rule applied upstream
+    is_attentive = (abs(yaw) <= 25.0) and (abs(pitch) <= 20.0) and (gaze_direction == 'front')
     return {
         'is_attentive': bool(is_attentive),
+        'engaged': bool(is_attentive),  # compatibility with legacy callers
         'yaw': yaw,
         'pitch': pitch,
-        'roll': roll
+        'roll': roll,
+        'gaze_direction': gaze_direction
     }
 
 
