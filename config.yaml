@@ -14,11 +14,27 @@ paths:
 
 # Face Detection and Tracking Configuration
 face_detection:
-  model: "yolo"  # Options: yolo, mtcnn, opencv
-  confidence_threshold: 0.5
-  nms_threshold: 0.4
-  min_face_size: 20
-  max_faces: 50
+  model: "ensemble"  # Options: yolo, mtcnn, opencv, mediapipe, ensemble
+  confidence_threshold: 0.3  # Lowered for better recall
+  nms_threshold: 0.3  # Lowered for better overlap handling
+  min_face_size: 15  # Lowered for distant faces
+  max_faces: 100  # Increased for classroom scenarios
+  
+  # Enhanced detection parameters
+  ensemble_models: ["yolo", "mediapipe", "mtcnn", "opencv"]
+  ensemble_voting: true
+  ensemble_confidence_threshold: 0.2
+  
+  # Preprocessing options
+  preprocessing:
+    denoising: true
+    contrast_enhancement: true
+    super_resolution: false
+    scale_factors: [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+  
+  # Tracking integration
+  enable_tracking: true
+  track_persistence: 30
 
 # Face Tracking Configuration
 face_tracking:
