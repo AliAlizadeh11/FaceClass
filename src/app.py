@@ -4,14 +4,13 @@ FaceClass Flask Application - Enhanced with Team 1 Components
 Provides web interface for video processing, model comparison, and advanced face analysis.
 """
 
-from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for
 import os
 import logging
 from pathlib import Path
 import json
 from datetime import datetime
 import uuid
-from werkzeug.utils import secure_filename
 import cv2
 import numpy as np
 
@@ -181,208 +180,20 @@ def run_model_benchmark():
         logger.error(f"Benchmark error: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/face-tracking-demo')
-def face_tracking_demo():
-    """Face tracking demonstration with Deep OC-SORT."""
-    if not team1_available:
-        return redirect(url_for('index'))
-    
-    return render_template('face_tracking_demo.html', team1_available=team1_available)
 
-@app.route('/api/track-faces', methods=['POST'])
-def track_faces():
-    """API endpoint for face tracking demonstration."""
-    if not team1_available:
-        return jsonify({'error': 'Team 1 components not available'}), 400
-    
-    try:
-        data = request.get_json()
-        detections = data.get('detections', [])
-        frame_id = data.get('frame_id', 0)
-        camera_id = data.get('camera_id', 0)
-        
-        # Update tracker
-        tracked_faces = deep_tracker.update(detections, frame_id, camera_id)
-        
-        # Get tracking performance metrics
-        metrics = deep_tracker.get_performance_metrics()
-        
-        return jsonify({
-            'success': True,
-            'tracked_faces': tracked_faces,
-            'metrics': metrics
-        })
-        
-    except Exception as e:
-        logger.error(f"Tracking error: {e}")
-        return jsonify({'error': str(e)}), 500
 
-@app.route('/quality-assessment')
-def quality_assessment():
-    """Face quality assessment interface."""
-    if not team1_available:
-        return redirect(url_for('index'))
-    
-    return render_template('quality_assessment.html', team1_available=team1_available)
 
-@app.route('/api/assess-face-quality', methods=['POST'])
-def assess_face_quality():
-    """API endpoint for face quality assessment."""
-    if not team1_available:
-        return jsonify({'error': 'Team 1 components not available'}), 400
-    
-    try:
-        if 'image' not in request.files:
-            return jsonify({'error': 'No image file provided'}), 400
-        
-        image_file = request.files['image']
-        if image_file.filename == '':
-            return jsonify({'error': 'No image file selected'}), 400
-        
-        # Read image
-        image_bytes = image_file.read()
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        if image is None:
-            return jsonify({'error': 'Invalid image file'}), 400
-        
-        # Assess quality
-        quality_result = quality_assessor.assess_face_quality(image)
-        
-        # Save annotated image
-        output_path = Path('static/team1_outputs')
-        output_path.mkdir(exist_ok=True)
-        
-        annotated_filename = f'quality_assessment_{datetime.now().strftime("%Y%m%d_%H%M%S")}.jpg'
-        annotated_path = output_path / annotated_filename
-        
-        # Create annotated image with quality metrics
-        annotated_image = image.copy()
-        cv2.putText(annotated_image, f"Quality: {quality_result['overall_score']:.2f}", 
-                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.putText(annotated_image, f"Resolution: {quality_result['resolution_score']:.2f}", 
-                    (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
-        cv2.putText(annotated_image, f"Lighting: {quality_result['lighting_score']:.2f}", 
-                    (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
-        
-        cv2.imwrite(str(annotated_path), annotated_image)
-        
-        return jsonify({
-            'success': True,
-            'quality_result': quality_result,
-            'annotated_image': f'/static/team1_outputs/{annotated_filename}'
-        })
-        
-    except Exception as e:
-        logger.error(f"Quality assessment error: {e}")
-        return jsonify({'error': str(e)}), 500
 
-@app.route('/database-management')
-def database_management():
-    """Database management interface for face encodings."""
-    if not team1_available:
-        return redirect(url_for('index'))
-    
-    try:
-        # Get database information
-        db_stats = db_manager.get_database_stats()
-        all_students = db_manager.get_all_students()
-        recent_encodings = db_manager.get_recent_encodings(limit=20)
-        
-        db_data = {
-            'stats': db_stats,
-            'students': all_students,
-            'recent_encodings': recent_encodings
-        }
-    except Exception as e:
-        logger.error(f"Database error: {e}")
-        db_data = {'error': str(e)}
-    
-    return render_template('database_management.html', data=db_data, team1_available=team1_available)
 
-@app.route('/api/add-student', methods=['POST'])
-def add_student():
-    """API endpoint to add a new student."""
-    if not team1_available:
-        return jsonify({'error': 'Team 1 components not available'}), 400
-    
-    try:
-        data = request.get_json()
-        student_id = data.get('student_id')
-        name = data.get('name')
-        email = data.get('email', '')
-        
-        if not student_id or not name:
-            return jsonify({'error': 'Student ID and name are required'}), 400
-        
-        # Add student
-        success = db_manager.add_student(student_id, name, email)
-        
-        if success:
-            return jsonify({'success': True, 'message': f'Student {name} added successfully'})
-        else:
-            return jsonify({'error': 'Failed to add student'}), 500
-            
-    except Exception as e:
-        logger.error(f"Add student error: {e}")
-        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/add-face-encoding', methods=['POST'])
-def add_face_encoding():
-    """API endpoint to add face encoding for a student."""
-    if not team1_available:
-        return jsonify({'error': 'Team 1 components not available'}), 400
-    
-    try:
-        if 'image' not in request.files:
-            return jsonify({'error': 'No image file provided'}), 400
-        
-        image_file = request.files['image']
-        student_id = request.form.get('student_id')
-        
-        if not student_id:
-            return jsonify({'error': 'Student ID is required'}), 400
-        
-        if image_file.filename == '':
-            return jsonify({'error': 'No image file selected'}), 400
-        
-        # Read image
-        image_bytes = image_file.read()
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        if image is None:
-            return jsonify({'error': 'Invalid image file'}), 400
-        
-        # Assess quality first
-        quality_result = quality_assessor.assess_face_quality(image)
-        
-        # Generate mock encoding (in real implementation, this would come from face recognition model)
-        mock_encoding = np.random.randn(128).astype(np.float32)
-        
-        # Add to database
-        success = db_manager.add_face_encoding(
-            student_id=student_id,
-            encoding=mock_encoding,
-            quality_score=quality_result['overall_score'],
-            lighting_condition='normal',
-            pose_angles={'yaw': 0, 'pitch': 0, 'roll': 0},
-            expression_type='neutral'
-        )
-        
-        if success:
-            return jsonify({
-                'success': True,
-                'message': 'Face encoding added successfully',
-                'quality_score': quality_result['overall_score']
-            })
-        else:
-            return jsonify({'error': 'Failed to add face encoding'}), 500
-            
-    except Exception as e:
-        logger.error(f"Add face encoding error: {e}")
-        return jsonify({'error': str(e)}), 500
+
+
+
+
+
+
+
+
 
 @app.route('/upload', methods=['POST'])
 def upload_video():
@@ -399,7 +210,7 @@ def upload_video():
             # Generate unique filename
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             session_id = str(uuid.uuid4())[:8]
-            filename = secure_filename(video_file.filename)
+            filename = video_file.filename
             name, ext = os.path.splitext(filename)
             
             # Save uploaded video
