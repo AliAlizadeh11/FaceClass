@@ -165,7 +165,7 @@ class EnhancedFaceDetectionService:
             return {'type': 'mtcnn', 'model': None, 'loaded': False}
     
     def _load_opencv_detector(self) -> Dict:
-        """Load OpenCV Haar cascade detector with multiple cascades."""
+        """Load OpenCV cascade detector with multiple cascade files."""
         try:
             cascades = {}
             
@@ -383,7 +383,7 @@ class EnhancedFaceDetectionService:
     
     def _detect_opencv(self, detector: Dict, frame: np.ndarray, 
                        model_name: str, scale_factor: float) -> List[DetectionResult]:
-        """Detect faces using OpenCV with multiple cascades."""
+        """Detect faces using OpenCV with multiple cascade files."""
         try:
             detections = []
             

@@ -169,7 +169,7 @@ class FaceTracker:
             return self._load_opencv_detector()
     
     def _load_opencv_detector(self):
-        """Load OpenCV Haar cascade detector."""
+        """Load OpenCV cascade detector."""
         try:
             cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
             cascade = cv2.CascadeClassifier(cascade_path)
@@ -185,7 +185,7 @@ class FaceTracker:
                 else:
                     raise Exception("Cascade file not found in any location")
             
-            logger.info("OpenCV Haar cascade detector loaded successfully")
+            logger.info("OpenCV cascade detector loaded successfully")
             return {'type': 'opencv', 'model': cascade}
             
         except Exception as e:
@@ -284,7 +284,7 @@ class FaceTracker:
         return detections
     
     def _detect_opencv(self, frame: np.ndarray) -> List[Dict]:
-        """Detect faces using OpenCV Haar cascade with improved sensitivity and filtering."""
+        """Detect faces using OpenCV cascade with improved sensitivity and filtering."""
         try:
             # Convert to grayscale
             if len(frame.shape) == 3:

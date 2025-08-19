@@ -1053,7 +1053,7 @@ def detect_faces_in_frame(frame):
             except Exception as e:
                 logger.debug(f"DNN detection error: {e}")
 
-        # 2) Haar Cascade at sensitive settings
+        # 2) OpenCV Cascade at sensitive settings
         try:
             gray = cv2.cvtColor(scaled_frame, cv2.COLOR_BGR2GRAY)
             face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -1069,10 +1069,10 @@ def detect_faces_in_frame(frame):
                     x1 = max(0, min(x1, original_w)); y1 = max(0, min(y1, original_h))
                     x2 = max(0, min(x2, original_w)); y2 = max(0, min(y2, original_h))
                     if x2 > x1 and y2 > y1:
-                        all_faces.append({'bbox': [x1, y1, x2, y2], 'confidence': 0.75, 'method': 'Haar Cascade'})
-                        detection_methods_used.append('Haar Cascade')
+                        all_faces.append({'bbox': [x1, y1, x2, y2], 'confidence': 0.75, 'method': 'OpenCV Cascade'})
+                        detection_methods_used.append('OpenCV Cascade')
         except Exception as e:
-            logger.debug(f"Haar detection error: {e}")
+            logger.debug(f"OpenCV detection error: {e}")
 
         # 3) MediaPipe (lower confidence)
         if MEDIAPIPE_AVAILABLE:
@@ -1136,7 +1136,7 @@ def detect_faces_in_frame(frame):
         cv2.putText(annotated_frame, face.get('method', 'N/A'),
                     (x1, min(annotated_frame.shape[0] - 5, y2 + 20)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (60, 60, 60), 1, cv2.LINE_AA)
 
-    detection_method = f"Combined: {', '.join(sorted(set(detection_methods_used)))}" if detection_methods_used else "Fallback: Haar"
+    detection_method = f"Combined: {', '.join(sorted(set(detection_methods_used)))}" if detection_methods_used else "Fallback: OpenCV"
     return annotated_frame, final_faces, detection_method
 
 

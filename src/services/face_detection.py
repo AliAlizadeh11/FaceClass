@@ -104,7 +104,7 @@ class FaceDetectionService:
             return self._load_opencv_detector()
     
     def _load_opencv_detector(self) -> Dict:
-        """Load OpenCV Haar cascade detector.
+        """Load OpenCV cascade detector.
         
         Returns:
             Dictionary containing OpenCV model type and loaded model
@@ -114,10 +114,10 @@ class FaceDetectionService:
             cascade = cv2.CascadeClassifier(cascade_path)
             
             if cascade.empty():
-                logger.error("Failed to load OpenCV Haar cascade")
+                logger.error("Failed to load OpenCV cascade")
                 raise ValueError("OpenCV cascade file not found")
             
-            logger.info("OpenCV Haar cascade detector loaded successfully")
+            logger.info("OpenCV cascade detector loaded successfully")
             return {'type': 'opencv', 'model': cascade}
             
         except Exception as e:
@@ -231,7 +231,7 @@ class FaceDetectionService:
             return []
     
     def _detect_opencv(self, frame: np.ndarray) -> List[Dict]:
-        """Detect faces using OpenCV Haar cascade.
+        """Detect faces using OpenCV cascade.
         
         Args:
             frame: Input frame as numpy array

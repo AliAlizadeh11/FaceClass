@@ -12,7 +12,7 @@ This enhanced face detection system significantly improves the accuracy and reli
 - **YOLOv8**: High-speed general object detection with person class
 - **MediaPipe**: Optimized for face detection with full-range model selection
 - **MTCNN**: Specialized face detection with enhanced sensitivity
-- **OpenCV Haar Cascades**: Multiple cascade files for comprehensive coverage
+- **OpenCV Cascades**: Multiple cascade files for comprehensive coverage
 
 #### **Ensemble Voting System**
 - Combines detections from multiple models
